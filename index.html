@@ -11,7 +11,7 @@
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-        // Firebase Config
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDWZWtD4BVA3_U3kuit8MRRVTAfL95_eRo",
             authDomain: "kinaaeducation.firebaseapp.com",
@@ -30,7 +30,7 @@
         // Current form state (SignIn or SignUp)
         let isSignUp = false;
 
-        // Switch between SignUp and SignIn forms
+        // Toggle between SignUp and SignIn
         function toggleForms() {
             isSignUp = !isSignUp;
             const formTitle = document.getElementById("formTitle");
@@ -47,7 +47,7 @@
             }
         }
 
-        // Handle Sign Up or Sign In based on the form state
+        // Handle Sign In or Sign Up
         async function submitForm() {
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
@@ -59,39 +59,39 @@
             }
 
             try {
-                // Check if it's the admin login
+                // Admin login (hardcoded credentials)
                 if (username === "thekinaa" && password === "1116") {
-                    // Admin login, set admin status
                     localStorage.setItem("isLoggedIn", "true");
                     localStorage.setItem("isAdmin", "true");
                     localStorage.setItem("username", username);
-                    window.location.href = "home.html"; // Redirect to home page
+                    window.location.href = "home.html"; // Redirect to home page for admin
                     return;
                 }
 
                 // Handle Sign Up or Sign In based on the form state
                 if (isSignUp) {
-                    // Create new user (Sign Up)
+                    // Sign Up (Create user with email and password)
                     const userCredential = await createUserWithEmailAndPassword(auth, username, password);
                     const user = userCredential.user;
 
                     // Add user data to Firestore (default as non-admin)
                     await setDoc(doc(db, "users", user.uid), {
-                        isAdmin: false, // Set default to false (you can change this as per your requirements)
+                        isAdmin: false,  // Default to non-admin
                         username: username,
                     });
 
+                    // Store user session info
                     localStorage.setItem("isLoggedIn", "true");
                     localStorage.setItem("isAdmin", "false");
                     localStorage.setItem("username", username);
 
                     window.location.href = "home.html"; // Redirect to home page
                 } else {
-                    // Sign In with existing user
+                    // Sign In (Log in with email and password)
                     const userCredential = await signInWithEmailAndPassword(auth, username, password);
                     const user = userCredential.user;
 
-                    // Check Firestore for user data (isAdmin)
+                    // Check Firestore for user data (get isAdmin status)
                     const docRef = doc(db, "users", user.uid);
                     const docSnap = await getDoc(docRef);
 
@@ -100,20 +100,18 @@
                         localStorage.setItem("isLoggedIn", "true");
                         localStorage.setItem("isAdmin", userData.isAdmin ? "true" : "false");
                         localStorage.setItem("username", username);
-
-                        window.location.href = "home.html"; // Redirect to home page
                     } else {
-                        // Optionally, if no data found, create a user record in Firestore (to be updated later)
+                        // Create user document in Firestore if not found
                         await setDoc(doc(db, "users", user.uid), {
-                            isAdmin: false, // Default value for new users
+                            isAdmin: false,  // Default to non-admin
                             username: username,
                         });
                         localStorage.setItem("isLoggedIn", "true");
                         localStorage.setItem("isAdmin", "false");
                         localStorage.setItem("username", username);
-
-                        window.location.href = "home.html"; // Redirect to home page
                     }
+
+                    window.location.href = "home.html"; // Redirect to home page
                 }
             } catch (error) {
                 showErrorMessage(error.message);
@@ -127,7 +125,6 @@
             errorMessage.textContent = message;
             errorContainer.classList.remove('hidden');
         }
-
     </script>
 </head>
 <body class="bg-black text-blue-200 flex items-center justify-center h-screen">
@@ -164,4 +161,3 @@
 
 </body>
 </html>
-
