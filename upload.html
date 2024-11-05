@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinaa Education - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://apis.google.com/js/api.js"></script>
+</head>
+<body class="bg-black text-blue-200 flex h-screen">
+
+    <!-- Main Content Section -->
+    <div class="w-full max-w-lg p-6">
+        <div class="bg-blue-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-center text-xl mb-4">Manage Categories</h2>
+            <input id="newCategory" type="text" placeholder="New Category Name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-4">
+            <button onclick="addCategory()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4">Add Category</button>
+            <div id="categoryList" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-blue-800 shadow-md rounded px-8 pt-6 pb-8">
+            <h2 class="text-center text-xl mb-4">Upload Video</h2>
+            <input id="videoTitle" type="text" placeholder="Video Title" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-4">
+            <input id="videoLink" type="text" placeholder="Google Drive Link" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-4">
+            <input id="videoPassword" type="password" placeholder="Set Password (optional)" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-4">
+            <select id="videoCategory" class="w-full mb-4">
+                <option value="">Select Category</option>
+            </select>
+            <button onclick="uploadVideo()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Add Video</button>
+        </div>
+    </div>
+
+    <!-- Video List Section (Sidebar) -->
+    <div class="w-1/3 bg-blue-700 text-white p-6 overflow-y-auto">
+        <h2 class="text-center text-xl mb-4">Uploaded Videos</h2>
+        <div id="videoList" class="space-y-2"></div>
+    </div>
+
+    <script>
+        // Load categories from localStorage and populate category selection and list
+        function loadCategories() {
+            const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+            const categoryList = document.getElementById("categoryList");
+            const videoCategory = document.getElementById("videoCategory");
+
+            categoryList.innerHTML = "";
+            videoCategory.innerHTML = "<option value=''>Select Category</option>";
+
+            categories.forEach((category, index) => {
+                const row = document.createElement("div");
+                row.className = "flex justify-between items-center";
+                row.innerHTML = `
+                    <span class="text-white">${category.name}</span>
+                    <button onclick="deleteCategory(${index})" class="bg-red-600 text-white py-1 px-3 rounded">Delete</button>
+                    <button onclick="renameCategory(${index})" class="bg-yellow-500 text-white py-1 px-3 rounded">Rename</button>
+                `;
+                categoryList.appendChild(row);
+
+                const option = document.createElement("option");
+                option.value = index;
+                option.textContent = category.name;
+                videoCategory.appendChild(option);
+            });
+        }
+
+        // Add new category to localStorage
+        function addCategory() {
+            const categoryName = document.getElementById("newCategory").value;
+            if (categoryName) {
+                const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+                categories.push({ name: categoryName, videos: [] });
+                localStorage.setItem("categories", JSON.stringify(categories));
+                document.getElementById("newCategory").value = ''; // Clear input
+                loadCategories(); // Refresh category list
+                alert("Category added successfully!");
+            } else {
+                alert("Please enter a category name.");
+            }
+        }
+
+        // Upload video to selected category
+        function uploadVideo() {
+            const title = document.getElementById("videoTitle").value;
+            const link = document.getElementById("videoLink").value;
+            const categoryIndex = document.getElementById("videoCategory").value;
+            const password = document.getElementById("videoPassword").value;
+
+            if (title && link && categoryIndex !== "") {
+                const video = { title, link, password };
+                const categories = JSON.parse(localStorage.getItem("categories"));
+                categories[categoryIndex].videos.push(video);
+                localStorage.setItem("categories", JSON.stringify(categories));
+
+                document.getElementById("videoTitle").value = ''; // Clear input
+                document.getElementById("videoLink").value = ''; // Clear input
+                document.getElementById("videoPassword").value = ''; // Clear input
+                loadVideos(); // Refresh video list
+                alert("Video added successfully!");
+            } else {
+                alert("Please complete all fields.");
+            }
+        }
+
+        // Load all videos in the sidebar
+        function loadVideos() {
+            const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+            const videoList = document.getElementById("videoList");
+            videoList.innerHTML = "";
+
+            categories.forEach((category, catIndex) => {
+                category.videos.forEach((video, vidIndex) => {
+                    const videoRow = document.createElement("div");
+                    videoRow.className = "flex justify-between items-center text-white p-2 rounded bg-blue-600 mb-2";
+
+                    const videoTitle = document.createElement("span");
+                    videoTitle.textContent = video.title;
+
+                    const editButton = document.createElement("button");
+                    editButton.className = "bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-2 rounded ml-2";
+                    editButton.textContent = "Edit";
+                    editButton.onclick = () => editVideo(catIndex, vidIndex);
+
+                    const deleteButton = document.createElement("button");
+                    deleteButton.className = "bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded ml-2";
+                    deleteButton.textContent = "Delete";
+                    deleteButton.onclick = () => deleteVideo(catIndex, vidIndex);
+
+                    videoRow.appendChild(videoTitle);
+                    videoRow.appendChild(editButton);
+                    videoRow.appendChild(deleteButton);
+                    videoList.appendChild(videoRow);
+                });
+            });
+        }
+
+        // Edit video details
+        function editVideo(categoryIndex, videoIndex) {
+            const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+            const video = categories[categoryIndex].videos[videoIndex];
+
+            const newTitle = prompt("Edit video title:", video.title);
+            const newLink = prompt("Edit video link:", video.link);
+            const newPassword = prompt("Edit password (leave empty for no password):", video.password);
+
+            if (newTitle && newLink) {
+                video.title = newTitle;
+                video.link = newLink;
+                video.password = newPassword || ""; // Update password
+                localStorage.setItem("categories", JSON.stringify(categories));
+                loadVideos(); // Refresh the video list
+                alert("Video edited successfully!");
+            } else {
+                alert("Please provide both a title and a link.");
+            }
+        }
+
+        // Delete video
+        function deleteVideo(categoryIndex, videoIndex) {
+            const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+            categories[categoryIndex].videos.splice(videoIndex, 1); // Remove the video
+            localStorage.setItem("categories", JSON.stringify(categories));
+            loadVideos(); // Refresh the video list
+            alert("Video deleted successfully!");
+        }
+
+        // Delete category
+        function deleteCategory(index) {
+            const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+            categories.splice(index, 1);
+            localStorage.setItem("categories", JSON.stringify(categories));
+            loadCategories(); // Refresh category list
+            loadVideos(); // Refresh video list
+            alert("Category deleted successfully!");
+        }
+
+        // Rename category
+        function renameCategory(index) {
+            const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+            const newName = prompt("Enter the new name for the category:", categories[index].name);
+            if (newName) {
+                categories[index].name = newName;
+                localStorage.setItem("categories", JSON.stringify(categories));
+                loadCategories(); // Refresh category list
+            }
+        }
+
+        loadCategories(); // Load categories and videos on page load
+        loadVideos(); // Load videos on page load
+    </script>
+</body>
+</html>

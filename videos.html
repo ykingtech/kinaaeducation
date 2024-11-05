@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinaa Education - View Videos</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-black text-blue-200 flex flex-col items-center justify-start min-h-screen p-4">
+
+    <div class="w-full max-w-lg">
+        <div class="bg-blue-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-center text-xl mb-4" id="categoryTitle">Loading...</h2>
+            <div id="videoList" class="space-y-4">
+                <!-- Videos will be loaded here -->
+            </div>
+            <div class="mt-4">
+                <button onclick="window.history.back()" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Back to Categories</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to load and display the videos for the selected category
+        function loadVideos() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryIndex = urlParams.get('category'); // Get the category index from the URL query string
+
+            if (categoryIndex === null) {
+                alert("Category not found.");
+                return;
+            }
+
+            const categories = JSON.parse(localStorage.getItem("categories") || "[]");
+            const category = categories[categoryIndex];
+
+            if (!category) {
+                alert("Category not found.");
+                return;
+            }
+
+            // Set category name in the header
+            const categoryTitle = document.getElementById("categoryTitle");
+            categoryTitle.textContent = category.name;
+
+            const videoList = document.getElementById("videoList");
+            videoList.innerHTML = ""; // Clear the list before reloading
+
+            // If there are videos in this category
+            if (category.videos && category.videos.length > 0) {
+                category.videos.forEach((video, index) => {
+                    const videoRow = document.createElement("div");
+                    videoRow.className = "flex justify-between items-center text-white";
+
+                    const videoTitle = document.createElement("span");
+                    videoTitle.textContent = video.title;
+
+                    const viewButton = document.createElement("button");
+                    viewButton.className = "bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded";
+                    viewButton.textContent = "View Video";
+
+                    // Attach a click event to the view button to handle password if set
+                    viewButton.onclick = function() {
+                        if (video.password) {
+                            const userPassword = prompt("Enter the password to view the video:");
+                            if (userPassword === video.password) {
+                                window.open(video.link, "_blank"); // Open video in new tab
+                            } else {
+                                alert("Incorrect password!");
+                            }
+                        } else {
+                            window.open(video.link, "_blank"); // Open video directly if no password
+                        }
+                    };
+
+                    videoRow.appendChild(videoTitle);
+                    videoRow.appendChild(viewButton);
+                    videoList.appendChild(videoRow);
+                });
+            } else {
+                const noVideosMessage = document.createElement("p");
+                noVideosMessage.className = "text-gray-400";
+                noVideosMessage.textContent = "No videos available in this category.";
+                videoList.appendChild(noVideosMessage);
+            }
+        }
+
+        // Initialize page
+        window.onload = loadVideos;
+    </script>
+</body>
+</html>
