@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinaa Education</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-black text-blue-200 flex items-center justify-center h-screen">
+
+    <div class="w-full max-w-xs">
+        <!-- Authentication Forms Container -->
+        <div id="authFormContainer" class="bg-blue-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 id="formTitle" class="text-center text-xl mb-4">Kinaa Education - Sign In</h2>
+            
+            <!-- Sign In Form (Default) -->
+            <form id="loginForm" class="mb-4" onsubmit="event.preventDefault(); login()">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2" for="username">Username</label>
+                    <input id="loginUsername" type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2" for="password">Password</label>
+                    <input id="loginPassword" type="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Sign In</button>
+            </form>
+
+            <!-- Sign Up Form (Hidden by default) -->
+            <form id="signUpForm" class="hidden" onsubmit="event.preventDefault(); signUp()">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2" for="newUsername">Username</label>
+                    <input id="newUsername" type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2" for="newPassword">Password</label>
+                    <input id="newPassword" type="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Sign Up</button>
+            </form>
+
+            <!-- Toggle between Sign In and Sign Up -->
+            <div class="mt-4 text-center">
+                <p id="toggleText" class="text-sm cursor-pointer text-blue-300" onclick="toggleForms()">Don't have an account? Sign Up</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to toggle between Sign Up and Login forms
+        function toggleForms() {
+            const loginForm = document.getElementById('loginForm');
+            const signUpForm = document.getElementById('signUpForm');
+            const formTitle = document.getElementById('formTitle');
+            const toggleText = document.getElementById('toggleText');
+
+            // Switch visibility of forms
+            if (loginForm.classList.contains('hidden')) {
+                loginForm.classList.remove('hidden');
+                signUpForm.classList.add('hidden');
+                formTitle.textContent = "Kinaa Education - Sign In";
+                toggleText.textContent = "Don't have an account? Sign Up";
+            } else {
+                loginForm.classList.add('hidden');
+                signUpForm.classList.remove('hidden');
+                formTitle.textContent = "Kinaa Education - Sign Up";
+                toggleText.textContent = "Already have an account? Sign In";
+            }
+        }
+
+        // Sign Up Function
+        function signUp() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+
+            // Save user data to localStorage
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const userExists = users.some(user => user.username === username);
+            
+            if (userExists) {
+                alert('Username already exists!');
+                return;
+            }
+
+            // Add new user to the users array
+            users.push({ username, password });
+            localStorage.setItem('users', JSON.stringify(users));
+
+            alert('Account created successfully!');
+            toggleForms(); // Switch to login form
+        }
+
+        // Login Function
+        function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(user => user.username === username && user.password === password);
+
+            if (user) {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('username', username);
+                alert('Login successful!');
+                window.location.href = "home.html"; // Redirect to home page
+            } else {
+                alert('Invalid username or password!');
+            }
+        }
+    </script>
+</body>
+</html>
