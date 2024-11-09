@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Platform - Upload</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex items-center justify-between mb-10">
+        <h1 class="text-3xl font-bold">Upload Video</h1>
+        <button onclick="location.href='home.html'" 
+                class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md font-semibold">
+            Home
+        </button>
+    </header>
+
+    <!-- Upload Form -->
+    <main class="w-full max-w-4xl bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
+        <form id="upload-form" class="space-y-4">
+            <!-- Video Title -->
+            <div>
+                <label for="title" class="block text-lg font-semibold mb-2">Video Title</label>
+                <input type="text" id="title" name="title" required 
+                       class="w-full p-3 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Video Link -->
+            <div>
+                <label for="link" class="block text-lg font-semibold mb-2">Video Link</label>
+                <input type="url" id="link" name="link" required 
+                       class="w-full p-3 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Category Selection -->
+            <div>
+                <label for="category" class="block text-lg font-semibold mb-2">Select Category</label>
+                <select id="category" name="category" required 
+                        class="w-full p-3 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Loading categories...</option>
+                </select>
+            </div>
+
+            <!-- Upload Button -->
+            <button type="button" onclick="uploadVideo()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-md text-xl font-semibold">
+                Upload Video
+            </button>
+        </form>
+
+        <!-- Uploaded Videos List -->
+        <div class="mt-8" id="uploaded-videos">
+            <h2 class="text-2xl font-semibold mb-4">Uploaded Videos</h2>
+            <ul class="space-y-4">
+                <!-- Dynamically added video items will go here -->
+            </ul>
+        </div>
+    </main>
+
+    <footer class="w-full max-w-4xl mt-10 text-center text-gray-500 text-sm">
+        &copy; 2023 Video Platform. All rights reserved.
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+
+    <script>
+        // Firebase configuration and initialization
+        const firebaseConfig = {
+            apiKey: "AIzaSyAF__nT0KcIICvwJuZUf05P2iMZfDiNo6M",
+            authDomain: "yasodha-ac86b.firebaseapp.com",
+            projectId: "yasodha-ac86b",
+            storageBucket: "yasodha-ac86b.firebasestorage.app",
+            messagingSenderId: "268363750401",
+            appId: "1:268363750401:web:d97405614b6bf6089e3400",
+            measurementId: "G-3JWTJG76P6"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Fetch categories from Firebase
+        function fetchCategories() {
+            const categoryRef = database.ref('categories');
+            const categorySelect = document.getElementById('category');
+            
+            // Set loading message
+            categorySelect.innerHTML = '<option value="">Loading categories...</option>';
+
+            categoryRef.once('value')
+                .then(snapshot => {
+                    const categories = snapshot.val();
+                    categorySelect.innerHTML = ''; // Clear the loading message
+
+                    if (categories) {
+                        // Populate category options
+                        for (const categoryId in categories) {
+                            const categoryName = categories[categoryId].name;
+                            const option = document.createElement('option');
+                            option.value = categoryId;
+                            option.innerText = categoryName;
+                            categorySelect.appendChild(option);
+                        }
+                    } else {
+                        // No categories available
+                        categorySelect.innerHTML = '<option value="">No categories available</option>';
+                        alert('No categories available in the database.');
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching categories:", error);
+                    alert('Failed to load categories');
+                    categorySelect.innerHTML = '<option value="">Error loading categories</option>';
+                });
+        }
+
+        // Handle video upload
+        function uploadVideo() {
+            const title = document.getElementById('title').value;
+            const link = document.getElementById('link').value;
+            const category = document.getElementById('category').value;
+
+            if (title && link && category) {
+                // Create a new video entry in the selected category
+                const videosRef = database.ref('categories/' + category + '/videos');
+                const newVideoRef = videosRef.push();
+                newVideoRef.set({
+                    title: title,
+                    url: link
+                }).then(() => {
+                    alert('Video uploaded successfully!');
+                    document.getElementById('upload-form').reset();  // Clear the form
+                    loadUploadedVideos(category);  // Refresh the list of videos
+                }).catch((error) => {
+                    console.error('Error uploading video:', error);
+                    alert('Error uploading video');
+                });
+            } else {
+                alert('Please fill all fields!');
+            }
+        }
+
+        // Load videos for the selected category
+        function loadUploadedVideos(categoryId) {
+            const videosRef = database.ref('categories/' + categoryId + '/videos');
+            videosRef.once('value', snapshot => {
+                const videos = snapshot.val();
+                const videoList = document.getElementById('uploaded-videos').querySelector('ul');
+                videoList.innerHTML = ''; // Clear the existing list
+
+                if (videos) {
+                    for (const videoId in videos) {
+                        const video = videos[videoId];
+                        const videoItem = document.createElement('li');
+                        videoItem.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center';
+                        videoItem.innerHTML = `
+                            <div>
+                                <h3 class="text-xl font-semibold">${video.title}</h3>
+                                <a href="${video.url}" class="text-blue-400" target="_blank">Watch Video</a>
+                            </div>
+                        `;
+                        videoList.appendChild(videoItem);
+                    }
+                } else {
+                    videoList.innerHTML = '<li class="text-gray-500">No videos uploaded for this category.</li>';
+                }
+            });
+        }
+
+        // Initial setup: Fetch categories when the page loads
+        window.onload = fetchCategories;
+    </script>
+</body>
+</html>
