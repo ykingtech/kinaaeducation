@@ -41,6 +41,29 @@
             </div>
         </div>
 
+        <!-- Category Edit Modal -->
+        <div id="category-edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+                <h2 class="text-xl font-bold mb-4">Edit Category</h2>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Category Name</label>
+                    <input id="edit-category-name" type="text" class="w-full border border-gray-300 p-2 rounded">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Category Thumbnail</label>
+                    <input id="edit-category-thumbnail" type="file" accept="image/*" class="w-full border border-gray-300 p-2 rounded">
+                    <div id="current-thumbnail-preview" class="mt-2 flex items-center">
+                        <img src="" alt="Current thumbnail" class="h-16 w-16 object-cover rounded hidden">
+                        <span class="text-sm text-gray-500 ml-2">No thumbnail set</span>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="category-edit-cancel-btn" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded">Cancel</button>
+                    <button id="category-edit-save-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
         <!-- User Interface -->
         <div id="user-interface" class="mb-8">
             <h1 class="text-3xl font-bold text-center my-8">Educational Videos</h1>
@@ -86,8 +109,14 @@
                 <div class="flex flex-wrap gap-4 mb-4" id="admin-categories-list">
                     <!-- Categories will be listed here -->
                 </div>
-                <div class="flex gap-2">
-                    <input type="text" id="new-category-input" placeholder="New category name" class="border border-gray-300 p-2 rounded flex-grow">
+                <div class="flex gap-2 items-end">
+                    <div class="flex-grow">
+                        <input type="text" id="new-category-input" placeholder="New category name" class="border border-gray-300 p-2 rounded w-full mb-2">
+                        <div class="flex items-center">
+                            <label class="text-gray-700 mr-2">Thumbnail:</label>
+                            <input type="file" id="new-category-thumbnail" accept="image/*" class="text-sm w-full">
+                        </div>
+                    </div>
                     <button id="add-category-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Add Category</button>
                 </div>
             </div>
@@ -131,9 +160,9 @@
         // Mock database - In a real application, this would be stored in Google Drive
         const DB = {
             categories: [
-                { id: 'math', name: 'Mathematics' },
-                { id: 'science', name: 'Science' },
-                { id: 'history', name: 'History' }
+                { id: 'math', name: 'Mathematics', thumbnailUrl: '/api/placeholder/320/180' },
+                { id: 'science', name: 'Science', thumbnailUrl: '/api/placeholder/320/180' },
+                { id: 'history', name: 'History', thumbnailUrl: '/api/placeholder/320/180' }
             ],
             videos: [
                 { 
@@ -168,8 +197,8 @@
             console.log('Google Drive API would be initialized here');
             // In a real implementation:
             // gapi.client.init({
-            //     apiKey: 'AIzaSyB--oTQJ1KRUocLNwtsBvVWLtsRiMmdmD4',
-            //     clientId: '833140599574-9ufadu9upc0988kh3gm1hgf4gji95kru.apps.googleusercontent.com',
+            //     apiKey: AIzaSyB--oTQJ1KRUocLNwtsBvVWLtsRiMmdmD4,
+            //     clientId: 833140599574-9ufadu9upc0988kh3gm1hgf4gji95kru.apps.googleusercontent.com,
             //     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
             //     scope: 'https://www.googleapis.com/auth/drive.file'
             // });
@@ -198,6 +227,7 @@
             videoDescription: document.getElementById('video-description'),
             adminCategoriesList: document.getElementById('admin-categories-list'),
             newCategoryInput: document.getElementById('new-category-input'),
+            newCategoryThumbnail: document.getElementById('new-category-thumbnail'),
             addCategoryBtn: document.getElementById('add-category-btn'),
             videoCategorySelect: document.getElementById('video-category-select'),
             videoTitleInput: document.getElementById('video-title-input'),
@@ -208,8 +238,17 @@
             uploadProgress: document.getElementById('upload-progress'),
             uploadProgressBar: document.getElementById('upload-progress-bar'),
             uploadStatus: document.getElementById('upload-status'),
-            homeLink: document.getElementById('home-link')
+            homeLink: document.getElementById('home-link'),
+            categoryEditModal: document.getElementById('category-edit-modal'),
+            editCategoryName: document.getElementById('edit-category-name'),
+            editCategoryThumbnail: document.getElementById('edit-category-thumbnail'),
+            currentThumbnailPreview: document.getElementById('current-thumbnail-preview'),
+            categoryEditCancelBtn: document.getElementById('category-edit-cancel-btn'),
+            categoryEditSaveBtn: document.getElementById('category-edit-save-btn')
         };
+
+        // Current editing category
+        let currentEditingCategory = null;
 
         // Event Listeners
         elements.adminLoginBtn.addEventListener('click', () => {
@@ -256,8 +295,25 @@
             const categoryName = elements.newCategoryInput.value.trim();
             if (categoryName) {
                 const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
-                DB.categories.push({ id: categoryId, name: categoryName });
+                
+                // Handle file upload (in a real app this would upload to Google Drive)
+                const thumbnailFile = elements.newCategoryThumbnail.files[0];
+                let thumbnailUrl = '/api/placeholder/320/180'; // Default placeholder
+                
+                if (thumbnailFile) {
+                    // In a real app, this would be the URL after uploading to Google Drive
+                    // For this demo, we just use the placeholder
+                    console.log('Category thumbnail would be uploaded to Google Drive');
+                }
+                
+                DB.categories.push({ 
+                    id: categoryId, 
+                    name: categoryName,
+                    thumbnailUrl: thumbnailUrl
+                });
+                
                 elements.newCategoryInput.value = '';
+                elements.newCategoryThumbnail.value = '';
                 loadAdminCategories();
                 updateCategorySelect();
             }
@@ -324,16 +380,52 @@
             loadCategories();
         });
 
+        elements.categoryEditCancelBtn.addEventListener('click', () => {
+            elements.categoryEditModal.classList.add('hidden');
+            currentEditingCategory = null;
+        });
+
+        elements.categoryEditSaveBtn.addEventListener('click', () => {
+            if (!currentEditingCategory) return;
+            
+            const newName = elements.editCategoryName.value.trim();
+            if (!newName) {
+                alert('Category name cannot be empty');
+                return;
+            }
+            
+            // Find the category
+            const category = DB.categories.find(cat => cat.id === currentEditingCategory);
+            if (category) {
+                category.name = newName;
+                
+                // Handle thumbnail update
+                const thumbnailFile = elements.editCategoryThumbnail.files[0];
+                if (thumbnailFile) {
+                    // In a real app, upload the file to Google Drive and update the URL
+                    // For this demo, we just simulate it
+                    console.log('Category thumbnail would be updated in Google Drive');
+                    // We keep the same placeholder URL
+                }
+                
+                loadAdminCategories();
+                updateCategorySelect();
+                elements.categoryEditModal.classList.add('hidden');
+                currentEditingCategory = null;
+            }
+        });
+
         // Functions
         function loadCategories() {
             elements.categoriesContainer.innerHTML = '';
+            elements.categoriesContainer.classList.remove('hidden');
             
             DB.categories.forEach(category => {
                 const categoryCard = document.createElement('div');
                 categoryCard.className = 'bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow';
                 categoryCard.innerHTML = `
-                    <div class="h-40 bg-blue-100 flex items-center justify-center">
-                        <span class="text-5xl text-blue-500">${category.name.charAt(0)}</span>
+                    <div class="h-40 bg-blue-100 flex items-center justify-center overflow-hidden">
+                        <img src="${category.thumbnailUrl}" alt="${category.name}" class="w-full h-full object-cover">
                     </div>
                     <div class="p-4">
                         <h3 class="text-xl font-bold">${category.name}</h3>
@@ -421,22 +513,59 @@
                 categoryChip.className = 'bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center';
                 categoryChip.innerHTML = `
                     <span>${category.name}</span>
-                    <button class="ml-2 text-red-500 hover:text-red-700" data-category-id="${category.id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <div class="ml-2 flex">
+                        <button class="text-blue-500 hover:text-blue-700 mr-1 edit-btn" data-category-id="${category.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </button>
+                        <button class="text-red-500 hover:text-red-700 delete-btn" data-category-id="${category.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 `;
                 
-                const deleteBtn = categoryChip.querySelector('button');
+                const deleteBtn = categoryChip.querySelector('.delete-btn');
                 deleteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const categoryId = deleteBtn.getAttribute('data-category-id');
                     deleteCategory(categoryId);
                 });
                 
+                const editBtn = categoryChip.querySelector('.edit-btn');
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const categoryId = editBtn.getAttribute('data-category-id');
+                    openCategoryEditModal(categoryId);
+                });
+                
                 elements.adminCategoriesList.appendChild(categoryChip);
             });
+        }
+
+        function openCategoryEditModal(categoryId) {
+            const category = DB.categories.find(cat => cat.id === categoryId);
+            if (!category) return;
+            
+            currentEditingCategory = categoryId;
+            elements.editCategoryName.value = category.name;
+            
+            // Update thumbnail preview
+            const previewImg = elements.currentThumbnailPreview.querySelector('img');
+            const previewText = elements.currentThumbnailPreview.querySelector('span');
+            
+            if (category.thumbnailUrl) {
+                previewImg.src = category.thumbnailUrl;
+                previewImg.classList.remove('hidden');
+                previewText.textContent = 'Current thumbnail';
+            } else {
+                previewImg.classList.add('hidden');
+                previewText.textContent = 'No thumbnail set';
+            }
+            
+            elements.categoryEditModal.classList.remove('hidden');
         }
 
         function deleteCategory(categoryId) {
