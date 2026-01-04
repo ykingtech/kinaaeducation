@@ -1,601 +1,830 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduVidShare - Educational Video Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CNV Holdings</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://apis.google.com/js/platform.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=Noto+Sans+Sinhala:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Outfit', 'Noto Sans Sinhala', sans-serif; background: #f8fafc; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        
+        /* --- DYNAMIC ICON SPLASH --- */
+        #splash-screen {
+            position: fixed; inset: 0; z-index: 9999;
+            background: linear-gradient(to bottom, #ffffff, #ecfdf5);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            overflow: hidden;
+            transition: opacity 0.8s ease-out, visibility 0.8s;
+        }
+        .bg-icon-container { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+        .bg-icon { position: absolute; color: #16a34a; opacity: 0.08; animation: floatIcon 6s infinite ease-in-out; }
+        @keyframes floatIcon { 0%, 100% { transform: translateY(0) scale(1); opacity: 0.08; } 50% { transform: translateY(-15px) scale(1.1); opacity: 0.15; } }
+        .splash-content { position: relative; z-index: 10; text-align: center; }
+        .splash-logo { font-size: 3.5rem; font-weight: 900; color: #1e293b; letter-spacing: -2px; margin-bottom: 5px; text-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .splash-sub { color: #15803d; letter-spacing: 4px; font-size: 0.8rem; font-weight: 800; margin-bottom: 40px; text-transform: uppercase; }
+        .loader-line { width: 180px; height: 4px; background: #e2e8f0; border-radius: 10px; overflow: hidden; position: relative; margin: 0 auto; }
+        .loader-fill { position: absolute; left: 0; top: 0; height: 100%; width: 40%; background: #16a34a; border-radius: 10px; animation: lineMove 1.2s infinite ease-in-out; }
+        @keyframes lineMove { 0% { left: -40%; } 100% { left: 100%; } }
+
+        /* --- CARD ANIMATIONS --- */
+        @keyframes cardSlideUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .land-card { animation: cardSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+        .view-section { height: calc(100vh - 75px); width: 100%; display: none; overflow-y: auto; scroll-behavior: smooth; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        /* DETAIL PAGE */
+        #detail-view {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 100; transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto; display: flex; flex-direction: column;
+        }
+        #detail-view.open { transform: translateX(0); }
+
+        /* INFO BOXES */
+        .info-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 16px; padding: 16px; margin-bottom: 15px; position: relative; overflow: hidden; }
+        .pulse-dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); } }
+
+        /* BOTTOM NAV */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 75px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; align-items: center; z-index: 50; padding-bottom: 10px; box-shadow: 0 -5px 20px rgba(0,0,0,0.03); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; font-size: 10px; font-weight: 600; width: 33%; transition: color 0.3s; }
+        .nav-item.active { color: #16a34a; }
+        .nav-item svg { width: 24px; height: 24px; transition: transform 0.2s; }
+        .nav-item.active svg { transform: translateY(-2px); }
+
+        /* MARKERS */
+        .dist-marker { background: rgba(255, 255, 255, 0.98); border: 1px solid #e2e8f0; border-left: 3px solid #3b82f6; border-radius: 8px; padding: 5px 10px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); min-width: 90px; max-width: 150px; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000 !important; }
+        .dist-name { font-size: 11px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dist-val { font-size: 10px; font-weight: 600; color: #64748b; margin-top: 1px; display: flex; align-items: center; gap: 3px; }
+        @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* FILTER MODAL */
+        #filterModal { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); display: none; align-items: flex-end; justify-content: center; }
+        #filterModal.open { display: flex; }
+        .modal-content { background: white; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .sat-btn { position: absolute; top: 10px; right: 10px; z-index: 400; background: white; padding: 8px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 10px; font-weight: bold; display: flex; flex-col; align-items: center; gap: 2px; }
+        #secret-screen { background-color: black; transition: opacity 0.5s ease; }
+        #loadMoreSpinner { display: none; justify-content: center; padding: 20px; }
+
+        /* AI CHATBOT STYLES */
+        #ai-chat-btn {
+            position: fixed; bottom: 90px; right: 20px; z-index: 999;
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white; width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+            transition: transform 0.2s; cursor: pointer;
+        }
+        #ai-chat-btn:active { transform: scale(0.95); }
+        
+        #ai-chat-window {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 1000; transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column;
+        }
+        #ai-chat-window.open { transform: translateY(0); }
+        
+        .chat-msg { margin-bottom: 12px; max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
+        .user-msg { align-self: flex-end; background: #2563eb; color: white; border-bottom-right-radius: 4px; }
+        .ai-msg { align-self: flex-start; background: #f1f5f9; color: #334155; border-bottom-left-radius: 4px; }
+        .ai-msg strong { font-weight: bold; color: #0f172a; }
+        
+        .typing-indicator span {
+            display: inline-block; width: 6px; height: 6px; background: #94a3b8; border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both; margin: 0 1px;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+        /* HIDDEN FLYER TEMPLATE (For HTML2Canvas) */
+        #flyer-template {
+            position: fixed; top: -9999px; left: -9999px; width: 350px; height: 500px;
+            background: #fff; border: 8px solid #16a34a; padding: 0;
+            display: flex; flex-direction: column;
+            font-family: 'Outfit', sans-serif;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Navigation -->
-    <nav class="bg-blue-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="#" class="text-2xl font-bold" id="home-link">EduVidShare</a>
-            <div class="space-x-2">
-                <button id="admin-login-btn" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Admin Login</button>
-            </div>
-        </div>
-    </nav>
+<body>
 
-    <!-- Main Content Area -->
-    <div class="container mx-auto p-4">
-        <!-- Admin Login Modal -->
-        <div id="admin-login-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-                <h2 class="text-xl font-bold mb-4">Admin Login</h2>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Username</label>
-                    <input id="admin-username" type="text" class="w-full border border-gray-300 p-2 rounded">
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Password</label>
-                    <input id="admin-password" type="password" class="w-full border border-gray-300 p-2 rounded">
-                </div>
-                <div class="flex justify-end space-x-2">
-                    <button id="admin-cancel-btn" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded">Cancel</button>
-                    <button id="admin-submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Login</button>
+    <div id="ai-chat-btn" onclick="openChat()">
+        <i class="fas fa-robot text-2xl animate-bounce"></i>
+    </div>
+
+    <div id="ai-chat-window">
+        <div class="bg-white border-b border-slate-100 p-4 flex justify-between items-center shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">🤖</div>
+                <div>
+                    <h3 class="font-bold text-slate-800">CNV AI Assistant</h3>
+                    <p class="text-[10px] text-green-600 font-bold flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> Online</p>
                 </div>
             </div>
+            <button onclick="closeChat()" class="w-8 h-8 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col bg-slate-50">
+            <div class="ai-msg">ආයුබෝවන්! 👋 මම CNV Holdings හි AI සහයකයා. තෝරාගත් ඉඩම ගැන ඕනෑම දෙයක් මගෙන් අහන්න.</div>
         </div>
 
-        <!-- Category Edit Modal -->
-        <div id="category-edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-                <h2 class="text-xl font-bold mb-4">Edit Category</h2>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Category Name</label>
-                    <input id="edit-category-name" type="text" class="w-full border border-gray-300 p-2 rounded">
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Category Thumbnail</label>
-                    <input id="edit-category-thumbnail" type="file" accept="image/*" class="w-full border border-gray-300 p-2 rounded">
-                    <div id="current-thumbnail-preview" class="mt-2 flex items-center">
-                        <img src="" alt="Current thumbnail" class="h-16 w-16 object-cover rounded hidden">
-                        <span class="text-sm text-gray-500 ml-2">No thumbnail set</span>
+        <div class="p-3 bg-white border-t border-slate-100 flex gap-2 items-end pb-6">
+            <textarea id="chatInput" rows="1" placeholder="Type your question in Sinhala..." class="flex-1 bg-slate-100 border-none rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 text-sm resize-none"></textarea>
+            <button onclick="sendMessage()" class="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <div id="flyer-template">
+        <div class="h-64 relative bg-gray-200">
+            <img id="flyerImg" src="" class="w-full h-full object-cover">
+            <div class="absolute bottom-0 left-0 bg-black/60 text-white px-4 py-2 font-bold text-xs uppercase tracking-widest w-full">CNV HOLDINGS</div>
+        </div>
+        <div class="flex-1 p-6 flex flex-col justify-between bg-white">
+            <div>
+                <h2 id="flyerTitle" class="text-2xl font-black text-slate-900 leading-tight mb-2"></h2>
+                <p id="flyerLoc" class="text-slate-500 font-bold mb-4 uppercase text-sm"></p>
+                
+                <div class="flex justify-between items-end border-t border-b border-gray-100 py-4">
+                    <div>
+                        <p class="text-xs text-gray-400 font-bold uppercase">Price</p>
+                        <p id="flyerPrice" class="text-3xl font-black text-green-600"></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400 font-bold uppercase">Size</p>
+                        <p id="flyerSize" class="text-xl font-bold text-slate-800"></p>
                     </div>
                 </div>
-                <div class="flex justify-end space-x-2">
-                    <button id="category-edit-cancel-btn" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded">Cancel</button>
-                    <button id="category-edit-save-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Save Changes</button>
-                </div>
             </div>
-        </div>
-
-        <!-- User Interface -->
-        <div id="user-interface" class="mb-8">
-            <h1 class="text-3xl font-bold text-center my-8">Educational Videos</h1>
-            
-            <!-- Categories Section -->
-            <div id="categories-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <!-- Categories will be loaded here dynamically -->
-            </div>
-
-            <!-- Videos Section -->
-            <div id="videos-container" class="hidden">
-                <button id="back-to-categories" class="mb-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-                    ← Back to Categories
-                </button>
-                <h2 id="category-title" class="text-2xl font-bold mb-4"></h2>
-                <div id="videos-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Videos will be loaded here dynamically -->
-                </div>
-            </div>
-
-            <!-- Video Player Section -->
-            <div id="video-player-container" class="hidden">
-                <button id="back-to-videos" class="mb-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-                    ← Back to Videos
-                </button>
-                <h2 id="video-title" class="text-2xl font-bold mb-4"></h2>
-                <div class="aspect-w-16 aspect-h-9 mb-4">
-                    <div id="video-player" class="w-full h-96 bg-black"></div>
-                </div>
-                <div id="video-description" class="bg-white p-4 rounded shadow mb-4"></div>
-            </div>
-        </div>
-
-        <!-- Admin Interface -->
-        <div id="admin-interface" class="hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold">Admin Dashboard</h1>
-                <button id="admin-logout-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Logout</button>
-            </div>
-
-            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-                <h2 class="text-xl font-bold mb-4">Manage Categories</h2>
-                <div class="flex flex-wrap gap-4 mb-4" id="admin-categories-list">
-                    <!-- Categories will be listed here -->
-                </div>
-                <div class="flex gap-2 items-end">
-                    <div class="flex-grow">
-                        <input type="text" id="new-category-input" placeholder="New category name" class="border border-gray-300 p-2 rounded w-full mb-2">
-                        <div class="flex items-center">
-                            <label class="text-gray-700 mr-2">Thumbnail:</label>
-                            <input type="file" id="new-category-thumbnail" accept="image/*" class="text-sm w-full">
-                        </div>
-                    </div>
-                    <button id="add-category-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Add Category</button>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h2 class="text-xl font-bold mb-4">Upload Video</h2>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Video Title</label>
-                    <input id="video-title-input" type="text" class="w-full border border-gray-300 p-2 rounded">
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Video Description</label>
-                    <textarea id="video-description-input" class="w-full border border-gray-300 p-2 rounded h-32"></textarea>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Category</label>
-                    <select id="video-category-select" class="w-full border border-gray-300 p-2 rounded">
-                        <!-- Categories will be loaded here -->
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Video File</label>
-                    <input id="video-file-input" type="file" accept="video/*" class="w-full border border-gray-300 p-2 rounded">
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Thumbnail Image (optional)</label>
-                    <input id="thumbnail-file-input" type="file" accept="image/*" class="w-full border border-gray-300 p-2 rounded">
-                </div>
-                <button id="upload-video-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Upload Video</button>
-                <div id="upload-progress" class="mt-4 hidden">
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div id="upload-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
-                    </div>
-                    <p id="upload-status" class="text-sm text-gray-600 mt-2"></p>
-                </div>
+            <div class="text-center">
+                <p class="text-xs font-bold text-slate-400 mb-1">Call for Details</p>
+                <p class="text-2xl font-black text-slate-900 tracking-wider">072 628 4277</p>
+                <div class="mt-2 bg-green-600 text-white text-[10px] font-bold py-1 rounded-full uppercase">Verified Property</div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Mock database - In a real application, this would be stored in Google Drive
-        const DB = {
-            categories: [
-                { id: 'math', name: 'Mathematics', thumbnailUrl: '/api/placeholder/320/180' },
-                { id: 'science', name: 'Science', thumbnailUrl: '/api/placeholder/320/180' },
-                { id: 'history', name: 'History', thumbnailUrl: '/api/placeholder/320/180' }
-            ],
-            videos: [
-                { 
-                    id: 'v1', 
-                    title: 'Introduction to Algebra', 
-                    description: 'Learn the basics of algebra in this comprehensive introduction.',
-                    category: 'math',
-                    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', // Placeholder video URL
-                    thumbnailUrl: '/api/placeholder/320/180'
-                },
-                { 
-                    id: 'v2', 
-                    title: 'Chemistry Fundamentals', 
-                    description: 'Understand the key principles of chemistry with this beginner-friendly tutorial.',
-                    category: 'science',
-                    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', // Placeholder video URL
-                    thumbnailUrl: '/api/placeholder/320/180'
-                },
-                { 
-                    id: 'v3', 
-                    title: 'World War II Overview', 
-                    description: 'A comprehensive look at the causes and effects of World War II.',
-                    category: 'history',
-                    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', // Placeholder video URL
-                    thumbnailUrl: '/api/placeholder/320/180'
-                }
-            ]
+    <div id="splash-screen">
+        <div class="bg-icon-container">
+            <i class="fas fa-map-marker-alt bg-icon" style="top: 10%; left: 10%; font-size: 40px; animation-delay: 0s;"></i>
+            <i class="fas fa-tree bg-icon" style="top: 20%; left: 25%; font-size: 24px; animation-delay: 1s;"></i>
+            <i class="fas fa-home bg-icon" style="top: 5%; left: 40%; font-size: 30px; animation-delay: 2s;"></i>
+            <i class="fas fa-certificate bg-icon" style="top: 15%; right: 10%; font-size: 35px; animation-delay: 0.5s;"></i>
+            <i class="fas fa-key bg-icon" style="top: 30%; right: 25%; font-size: 28px; animation-delay: 1.5s;"></i>
+            <i class="fas fa-handshake bg-icon" style="top: 50%; left: 5%; font-size: 45px; animation-delay: 3s;"></i>
+            <i class="fas fa-tags bg-icon" style="top: 45%; right: 5%; font-size: 30px; animation-delay: 2.5s;"></i>
+            <i class="fas fa-home bg-icon" style="bottom: 15%; left: 15%; font-size: 50px; animation-delay: 1s;"></i>
+            <i class="fas fa-map bg-icon" style="bottom: 10%; right: 20%; font-size: 40px; animation-delay: 0s;"></i>
+            <i class="fas fa-tree bg-icon" style="bottom: 25%; left: 40%; font-size: 25px; animation-delay: 2s;"></i>
+            <i class="fas fa-check-circle bg-icon" style="bottom: 5%; right: 45%; font-size: 30px; animation-delay: 1.2s;"></i>
+        </div>
+        <div class="splash-content">
+            <h1 class="splash-logo">CNV <span class="text-green-600">HOLDINGS</span></h1>
+            <p class="splash-sub">YOUR TRUSTED LAND PARTNER</p>
+            <div class="loader-line"><div class="loader-fill"></div></div>
+            <p class="text-slate-400 text-[10px] mt-4 font-bold tracking-widest animate-pulse">LOADING PROPERTIES...</p>
+        </div>
+    </div>
+
+    <div id="secret-screen" class="fixed inset-0 z-[99999] hidden flex-col items-center justify-center text-center p-6 opacity-0" onclick="closeSecret()">
+        <div class="space-y-4 animate-[popIn_0.5s_ease-out]">
+            <h1 class="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400 tracking-tighter" style="font-family: 'Courier New', monospace;">THE KINA</h1>
+            <p class="text-gray-400 text-sm tracking-[0.5em] uppercase animate-pulse">System Developer</p>
+            <div class="mt-10 border border-gray-800 rounded-full px-4 py-2 text-xs text-gray-600 inline-block">Tap anywhere to exit</div>
+        </div>
+    </div>
+
+    <div id="view-list" class="view-section active bg-gray-50">
+        <div class="sticky top-0 bg-white/90 backdrop-blur-xl z-20 px-5 pt-10 pb-4 border-b border-slate-100 shadow-sm">
+            <div class="flex justify-between items-center mb-3">
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Discover Lands 🏡</h1>
+                <button onclick="openFilter()" class="bg-slate-100 p-2 rounded-xl text-slate-600 hover:bg-green-50 hover:text-green-600 transition"><i class="fas fa-sliders-h"></i></button>
+            </div>
+            <div class="flex gap-2">
+                <div class="relative flex-1 shadow-sm">
+                    <input type="text" id="searchInput" placeholder="Search city (e.g. Kandy / නුවර)..." class="w-full bg-slate-100/50 border-none rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-green-500/20 text-sm font-semibold text-slate-700">
+                    <span class="absolute left-3.5 top-3 text-slate-400">🔍</span>
+                </div>
+                <div class="relative">
+                    <select id="sortOption" onchange="sortLands()" class="appearance-none bg-slate-100 border-none rounded-xl py-3 pl-3 pr-8 outline-none text-xs font-bold text-slate-600 h-full">
+                        <option value="new">🆕 Newest</option>
+                        <option value="price_asc">💰 Lowest Price</option>
+                        <option value="price_desc">💎 Highest Price</option>
+                    </select>
+                    <span class="absolute right-2 top-3.5 text-slate-400 text-xs pointer-events-none">▼</span>
+                </div>
+            </div>
+        </div>
+        <div id="landList" class="p-5 space-y-4 min-h-[60vh]"></div>
+        <div id="loadMoreSpinner"><div class="w-6 h-6 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin"></div></div>
+        <footer class="text-center py-8 text-slate-400 pb-24">
+            <h3 class="font-black text-slate-200 text-3xl tracking-tighter mb-2">CNV</h3>
+            <p class="text-[10px] font-bold uppercase tracking-widest">Real Estate Solutions</p>
+            <p class="text-[10px] mt-1">© 2026 CNV Holdings. All Rights Reserved.</p>
+        </footer>
+    </div>
+
+    <div id="view-fav" class="view-section bg-gray-50">
+        <div class="sticky top-0 bg-white/90 backdrop-blur-xl z-20 px-6 pt-12 pb-4 border-b border-slate-100">
+            <h1 class="text-2xl font-bold text-slate-900">Saved Lands ❤️</h1>
+        </div>
+        <div id="favList" class="p-5 space-y-4 pb-32 min-h-[50vh] flex flex-col items-center justify-center"><p class="text-slate-400 text-sm">No saved items yet.</p></div>
+    </div>
+
+    <div id="view-map" class="view-section relative">
+        <div id="map"></div>
+        <button class="sat-btn" onclick="toggleSat()"><span class="text-lg">🛰️</span><span>Sat</span></button>
+        <div id="mapFloatCard" class="absolute bottom-24 left-4 right-4 bg-white p-3 rounded-2xl shadow-2xl z-[500] hidden flex gap-4 items-center cursor-pointer border-l-4 border-green-500 animate-[slideUp_0.3s_ease]" onclick="openDetailFromMap()">
+            <img id="mapCardImg" class="w-16 h-16 rounded-xl object-cover bg-slate-200">
+            <div class="flex-1 min-w-0">
+                <h3 id="mapCardTitle" class="font-bold text-slate-800 text-sm truncate">Title</h3>
+                <p id="mapCardLocation" class="text-xs text-slate-500 mb-1 truncate">Location</p>
+                <div class="flex justify-between items-center"><p id="mapCardPrice" class="text-green-600 font-bold text-xs"></p><span class="text-[10px] bg-slate-100 px-2 py-1 rounded-full text-slate-500 font-bold">Details →</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="detail-view">
+        <div class="flex justify-between items-center p-4 pt-10 bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-50">
+            <button onclick="closeDetail()" class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition"><i class="fas fa-times"></i></button>
+            <h3 class="font-bold text-slate-800 text-sm tracking-wide">DETAILS</h3>
+            <div class="flex gap-2">
+                <button onclick="generateFlyer()" class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100"><i class="fas fa-camera"></i></button>
+                <button onclick="shareLink()" class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600"><i class="fas fa-share-alt"></i></button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto bg-white pb-10">
+            <div class="h-80 bg-slate-200 relative group">
+                <img id="detailImg" src="" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                <div class="absolute bottom-0 left-0 p-6 w-full">
+                    <div class="flex gap-2 mb-2">
+                         <span id="detailBadge" class="inline-block px-3 py-1 rounded-lg text-[10px] font-bold uppercase text-white shadow-lg"></span>
+                         <span id="detailNewBadge" class="hidden px-3 py-1 rounded-lg text-[10px] font-bold uppercase text-white shadow-lg bg-blue-500 animate-pulse">NEW</span>
+                    </div>
+                    <h2 id="detailTitle" class="text-2xl font-bold text-white leading-tight"></h2>
+                </div>
+                <button onclick="slide(-1)" class="absolute left-4 top-1/2 bg-white/20 text-white w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md">❮</button>
+                <button onclick="slide(1)" class="absolute right-4 top-1/2 bg-white/20 text-white w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md">❯</button>
+            </div>
+
+            <div class="p-6">
+                <div class="flex justify-between items-end mb-6">
+                    <div><p class="text-xs font-bold text-slate-400 uppercase">Price</p><p id="detailPrice" class="text-3xl font-bold text-green-600"></p></div>
+                    <div class="text-right"><p class="text-xs font-bold text-slate-400 uppercase">Size</p><p id="detailPerches" class="text-xl font-bold text-slate-800"></p></div>
+                </div>
+                
+                <p id="detailLocation" class="text-slate-600 font-medium mb-6 flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="text-lg">📍</span> <span class="text-sm">Location</span></p>
+
+                <div id="cropBox" class="bg-orange-50 p-4 rounded-2xl border border-orange-100 mb-4 hidden">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-seedling text-orange-600"></i>
+                        <h3 class="font-bold text-orange-800 text-sm">Best Crops</h3>
+                    </div>
+                    <p id="cropText" class="text-xs font-bold text-slate-600"></p>
+                </div>
+
+                <div class="info-box">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="pulse-dot"></div>
+                        <h3 class="font-bold text-green-800 text-sm uppercase tracking-wide">Access Road Analysis</h3>
+                    </div>
+                    <div id="roadAnalysisContent" class="space-y-3">
+                        <div class="flex items-center gap-3 text-slate-500"><i class="fas fa-circle-notch fa-spin"></i> <span class="text-xs">Scanning satellite data...</span></div>
+                    </div>
+                </div>
+
+                <div class="info-box" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe;">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="pulse-dot" style="background:#2563eb; box-shadow:none;"></div>
+                        <h3 class="font-bold text-blue-800 text-sm uppercase tracking-wide">Public Transport</h3>
+                    </div>
+                    <div id="transportContent" class="space-y-3">
+                        <div class="flex items-center gap-3 text-slate-500"><i class="fas fa-bus fa-bounce"></i> <span class="text-xs">Locating bus stops...</span></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 mb-8">
+                    <button onclick="viewOnMap()" class="bg-slate-100 text-slate-700 py-3 rounded-xl font-bold text-[10px] flex flex-col items-center justify-center gap-1 hover:bg-slate-200"><span class="text-lg">🗺️</span> App Map</button>
+                    <button onclick="openGoogleMaps()" class="bg-blue-50 text-blue-600 py-3 rounded-xl font-bold text-[10px] flex flex-col items-center justify-center gap-1 hover:bg-blue-100"><span class="text-lg">🚗</span> Directions</button>
+                    <button onclick="openStreetView()" class="bg-yellow-50 text-yellow-600 py-3 rounded-xl font-bold text-[10px] flex flex-col items-center justify-center gap-1 hover:bg-yellow-100"><span class="text-lg">🌏</span> Street View</button>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="font-bold text-slate-900 mb-3 text-lg">Description</h3>
+                    <p id="detailDesc" class="text-slate-600 text-sm leading-7 whitespace-pre-line"></p>
+                </div>
+                
+                <div class="mb-8">
+                    <h3 class="font-bold text-slate-900 mb-3 text-lg">Nearby Highlights</h3>
+                    <div id="nearbyList" class="space-y-2 text-sm text-slate-500 bg-slate-50 p-4 rounded-2xl border border-slate-100"></div>
+                </div>
+
+                <div class="bg-green-50 p-5 rounded-2xl border border-green-100 mb-8">
+                    <h3 class="font-bold text-green-800 mb-2">🤝 Make an Offer</h3>
+                    <div class="flex gap-2">
+                        <input type="number" id="offerInput" placeholder="Rs. Your Offer" class="flex-1 px-3 py-2 rounded-lg border-none text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-green-400">
+                        <button onclick="sendOffer()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md">Send</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 mb-3 text-lg">You Might Also Like</h3>
+                    <div id="similarList" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 bg-white border-t border-slate-100 grid grid-cols-2 gap-4 pb-8">
+            <a id="waBtn" href="#" target="_blank" class="bg-[#25D366] text-white py-3.5 rounded-xl font-bold text-center flex items-center justify-center gap-2 shadow-lg"><i class="fab fa-whatsapp text-lg"></i> WhatsApp</a>
+            <a href="tel:+94726284277" class="bg-slate-900 text-white py-3.5 rounded-xl font-bold text-center flex items-center justify-center gap-2"><i class="fas fa-phone-alt"></i> Call Now</a>
+        </div>
+    </div>
+
+    <div id="filterModal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold text-slate-900">Filter Properties</h2><button onclick="closeFilter()" class="text-slate-500 text-2xl">✕</button></div>
+            <div class="space-y-6">
+                <div><label class="text-sm font-bold text-slate-600 mb-2 block">Max Price</label><input type="range" id="priceRange" min="0" max="5000000" step="50000" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600"><p class="text-right text-green-600 font-bold mt-1" id="priceVal">Any</p></div>
+                <div><label class="text-sm font-bold text-slate-600 mb-2 block">Min Perches</label><input type="number" id="perchMin" placeholder="e.g. 10" class="w-full p-3 bg-slate-50 rounded-xl border outline-none"></div>
+                <button onclick="applyFilter()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button onclick="switchTab('list')" id="nav-list" class="nav-item active"><i class="fas fa-home text-lg"></i><span>Home</span></button>
+        <button onclick="switchTab('fav')" id="nav-fav" class="nav-item"><i class="fas fa-heart text-lg"></i><span>Saved</span></button>
+        <button onclick="switchTab('map')" id="nav-map" class="nav-item"><i class="fas fa-map text-lg"></i><span>Map</span></button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // *** IMPORTANT: REPLACE WITH YOUR OWN API KEY ***
+        const GEMINI_API_KEY = "AIzaSyDlTSrpVCJ0iJMlUBX93NUUCYKAnZN5ygY"; 
+
+        const firebaseConfig = { apiKey: "AIzaSyA30v8yswbyqF-oB29C7DXPWpKwCQscs5o", authDomain: "land-425be.firebaseapp.com", projectId: "land-425be", storageBucket: "land-425be.firebasestorage.app", messagingSenderId: "1053755182230", appId: "1:1053755182230:web:9596bee1de56a3c63e86b7", measurementId: "G-DQVYCKN9KY" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- GLOBAL VARIABLES FOR AI CONTEXT ---
+        let currentAiContext = {
+            title: "", price: "", location: "", description: "", 
+            roadWidth: "Unknown", roadVehicle: "Unknown", transport: "Unknown", crops: "Unknown"
         };
 
-        // Google Drive API setup - This would be implemented with actual API keys in a real application
-        function initGoogleDriveAPI() {
-            console.log('Google Drive API would be initialized here');
-            // In a real implementation:
-            // gapi.client.init({
-            //     apiKey: AIzaSyB--oTQJ1KRUocLNwtsBvVWLtsRiMmdmD4,
-            //     clientId: 833140599574-9ufadu9upc0988kh3gm1hgf4gji95kru.apps.googleusercontent.com,
-            //     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-            //     scope: 'https://www.googleapis.com/auth/drive.file'
-            // });
+        const cropZones = {
+            'coconut': ['kurunegala', 'puttalam', 'chilaw', 'gampaha', 'kuliyapitiya', 'marawila', 'dankotuwa'],
+            'tea': ['nuwara eliya', 'hatton', 'badulla', 'bandarawela', 'kandy', 'gampola', 'talawakele'],
+            'rubber': ['kalutara', 'ratnapura', 'kegalle', 'avissawella', 'ingiriya', 'bulathsinhala'],
+            'cinnamon': ['galle', 'matara', 'hikkaduwa', 'ambalangoda', 'elpitiya'],
+            'paddy': ['anuradhapura', 'polonnaruwa', 'hambantota', 'ampara']
+        };
+
+        const cityMapping = {
+            "කොළඹ": "colombo", "නුගේගොඩ": "nugegoda", "මහරගම": "maharagama", "පිලියන්දල": "piliyandala",
+            "කැස්බෑව": "kesbewa", "බණ්ඩාරගම": "bandaragama", "හොරණ": "horana", "පානදුර": "panadura",
+            "වාද්දුව": "wadduwa", "කළුතර": "kalutara", "මතුගම": "mathugama", "අලුත්ගම": "aluthgama",
+            "බෙන්තොට": "bentota", "අම්බලන්ගොඩ": "ambalangoda", "හික්කඩුව": "hikkaduwa", "ගාල්ල": "galle",
+            "මාතර": "matara", "වැලිගම": "weligama", "හම්බන්තොට": "hambantota", "තංගල්ල": "tangalle",
+            "ඇඹිලිපිටිය": "embilipitiya", "රත්නපුර": "rathnapura", "අවිස්සාවේල්ල": "avissawella",
+            "හෝමාගම": "homagama", "කොට්ටාව": "kottawa", "මාලබේ": "malabe", "බත්තරමුල්ල": "battaramulla",
+            "රාජගිරිය": "rajagiriya", "කඩවත": "kadawatha", "කැලණිය": "kelaniya", "වත්තල": "wattala",
+            "ජාඇල": "ja-ela", "මීගමුව": "negombo", "ගම්පහ": "gampaha", "වේයන්ගොඩ": "veyangoda",
+            "නිට්ටඹුව": "nittambuwa", "වරකාපොල": "warakapola", "කෑගල්ල": "kegalle", "මාවනැල්ල": "mawanella",
+            "නුවර": "kandy", "මහනුවර": "kandy", "පේරාදෙණිය": "peradeniya", "ගම්පොල": "gampola",
+            "නාවලපිටිය": "nawalapitiya", "හැටන්": "hatton", "නුවරඑළිය": "nuwaraeliya", "බණ්ඩාරවෙල": "bandarawela",
+            "බදුල්ල": "badulla", "මොණරාගල": "monaragala", "කුරුණෑගල": "kurunegala", "වාරියපොල": "wariyapola",
+            "කුලියාපිටිය": "kuliyapitiya", "පුත්තලම": "puttalam", "හලාවත": "chilaw", "අනුරාධපුරය": "anuradhapura",
+            "පොළොන්නරුව": "polonnaruwa", "දඹුල්ල": "dambulla", "සීගිරිය": "sigiriya", "ත්‍රිකුණාමලය": "trincomalee",
+            "මඩකලපුව": "batticaloa", "යාපනය": "jaffna"
+        };
+
+        const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png');
+        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
+        const map = L.map('map', { zoomControl: false, tap: false, layers: [streetLayer] }).setView([6.9271, 79.8612], 9);
+        let currentLayer = 'street';
+        window.toggleSat = () => { if(currentLayer === 'street') { map.removeLayer(streetLayer); map.addLayer(satLayer); currentLayer='sat'; } else { map.removeLayer(satLayer); map.addLayer(streetLayer); currentLayer='street'; } };
+
+        let landsData = []; let displayedData = []; let renderCount = 0; const BATCH_SIZE = 5; 
+        let nearbyLayer = L.layerGroup().addTo(map);
+        let landLayer = L.layerGroup().addTo(map); 
+        let selectedLandId = null;
+        let favorites = JSON.parse(localStorage.getItem('cnv_favs')) || [];
+
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${tab}`).classList.add('active');
+            document.getElementById(`nav-${tab}`).classList.add('active');
+            if(tab === 'map') setTimeout(() => map.invalidateSize(), 100);
+            if(tab === 'fav') renderFavorites();
+        };
+
+        async function loadLands() {
+            try {
+                const q = query(collection(db, "lands")); 
+                const snap = await getDocs(q);
+                landsData = []; const now = new Date();
+                
+                snap.forEach(doc => {
+                    const data = doc.data(); data.id = doc.id;
+                    let landDate = data.timestamp && data.timestamp.seconds ? new Date(data.timestamp.seconds * 1000) : (data.timestamp ? new Date(data.timestamp) : new Date(0));
+                    data.sortDate = landDate; 
+
+                    const diffDays = Math.ceil(Math.abs(now - landDate) / (1000 * 60 * 60 * 24));
+                    data.isNew = diffDays <= 7;
+                    if (data.status === 'sold' && data.soldAt) {
+                       const sDate = new Date(data.soldAt.seconds ? data.soldAt.seconds*1000 : data.soldAt);
+                       if(Math.ceil(Math.abs(now - sDate) / 86400000) > 3) return;
+                    }
+                    if(!data.imageUrls) data.imageUrls = [data.imageUrl];
+                    landsData.push(data);
+                });
+
+                landsData.sort((a, b) => b.sortDate - a.sortDate);
+                displayedData = [...landsData];
+                resetRender();
+                updateMapMarkers(landsData);
+
+                const params = new URLSearchParams(window.location.search);
+                if(params.get('id')) { const l = landsData.find(x=>x.id===params.get('id')); if(l) openDetail(l); }
+
+                setTimeout(() => {
+                    const splash = document.getElementById('splash-screen');
+                    splash.style.opacity = '0';
+                    splash.style.visibility = 'hidden'; 
+                }, 2500); 
+            } catch (e) { 
+                console.error("Error fetching lands:", e); 
+                setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 3000); 
+            }
         }
 
-        // DOM elements
-        const elements = {
-            adminLoginBtn: document.getElementById('admin-login-btn'),
-            adminLoginModal: document.getElementById('admin-login-modal'),
-            adminCancelBtn: document.getElementById('admin-cancel-btn'),
-            adminSubmitBtn: document.getElementById('admin-submit-btn'),
-            adminUsername: document.getElementById('admin-username'),
-            adminPassword: document.getElementById('admin-password'),
-            adminInterface: document.getElementById('admin-interface'),
-            userInterface: document.getElementById('user-interface'),
-            adminLogoutBtn: document.getElementById('admin-logout-btn'),
-            categoriesContainer: document.getElementById('categories-container'),
-            videosContainer: document.getElementById('videos-container'),
-            videoPlayerContainer: document.getElementById('video-player-container'),
-            backToCategoriesBtn: document.getElementById('back-to-categories'),
-            backToVideosBtn: document.getElementById('back-to-videos'),
-            categoryTitle: document.getElementById('category-title'),
-            videosGrid: document.getElementById('videos-grid'),
-            videoPlayer: document.getElementById('video-player'),
-            videoTitle: document.getElementById('video-title'),
-            videoDescription: document.getElementById('video-description'),
-            adminCategoriesList: document.getElementById('admin-categories-list'),
-            newCategoryInput: document.getElementById('new-category-input'),
-            newCategoryThumbnail: document.getElementById('new-category-thumbnail'),
-            addCategoryBtn: document.getElementById('add-category-btn'),
-            videoCategorySelect: document.getElementById('video-category-select'),
-            videoTitleInput: document.getElementById('video-title-input'),
-            videoDescriptionInput: document.getElementById('video-description-input'),
-            videoFileInput: document.getElementById('video-file-input'),
-            thumbnailFileInput: document.getElementById('thumbnail-file-input'),
-            uploadVideoBtn: document.getElementById('upload-video-btn'),
-            uploadProgress: document.getElementById('upload-progress'),
-            uploadProgressBar: document.getElementById('upload-progress-bar'),
-            uploadStatus: document.getElementById('upload-status'),
-            homeLink: document.getElementById('home-link'),
-            categoryEditModal: document.getElementById('category-edit-modal'),
-            editCategoryName: document.getElementById('edit-category-name'),
-            editCategoryThumbnail: document.getElementById('edit-category-thumbnail'),
-            currentThumbnailPreview: document.getElementById('current-thumbnail-preview'),
-            categoryEditCancelBtn: document.getElementById('category-edit-cancel-btn'),
-            categoryEditSaveBtn: document.getElementById('category-edit-save-btn')
-        };
+        function updateMapMarkers(dataArray) {
+            landLayer.clearLayers();
+            dataArray.forEach(data => {
+                if(!data.lat || !data.lng) return;
+                const isSelected = data.id === selectedLandId;
+                let color = data.status === 'sold' ? '#ef4444' : '#16a34a';
+                if(isSelected) color = '#3b82f6'; 
 
-        // Current editing category
-        let currentEditingCategory = null;
-
-        // Event Listeners
-        elements.adminLoginBtn.addEventListener('click', () => {
-            elements.adminLoginModal.classList.remove('hidden');
-        });
-
-        elements.adminCancelBtn.addEventListener('click', () => {
-            elements.adminLoginModal.classList.add('hidden');
-        });
-
-        elements.adminSubmitBtn.addEventListener('click', () => {
-            const username = elements.adminUsername.value;
-            const password = elements.adminPassword.value;
-
-            if (username === 'thekinaa' && password === '1116') {
-                elements.adminLoginModal.classList.add('hidden');
-                elements.userInterface.classList.add('hidden');
-                elements.adminInterface.classList.remove('hidden');
-                loadAdminInterface();
-            } else {
-                alert('Invalid username or password');
-            }
-        });
-
-        elements.adminLogoutBtn.addEventListener('click', () => {
-            elements.adminInterface.classList.add('hidden');
-            elements.userInterface.classList.remove('hidden');
-            elements.videosContainer.classList.add('hidden');
-            elements.videoPlayerContainer.classList.add('hidden');
-            loadCategories();
-        });
-
-        elements.backToCategoriesBtn.addEventListener('click', () => {
-            elements.videosContainer.classList.add('hidden');
-            loadCategories();
-        });
-
-        elements.backToVideosBtn.addEventListener('click', () => {
-            elements.videoPlayerContainer.classList.add('hidden');
-            elements.videosContainer.classList.remove('hidden');
-        });
-
-        elements.addCategoryBtn.addEventListener('click', () => {
-            const categoryName = elements.newCategoryInput.value.trim();
-            if (categoryName) {
-                const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
-                
-                // Handle file upload (in a real app this would upload to Google Drive)
-                const thumbnailFile = elements.newCategoryThumbnail.files[0];
-                let thumbnailUrl = '/api/placeholder/320/180'; // Default placeholder
-                
-                if (thumbnailFile) {
-                    // In a real app, this would be the URL after uploading to Google Drive
-                    // For this demo, we just use the placeholder
-                    console.log('Category thumbnail would be uploaded to Google Drive');
-                }
-                
-                DB.categories.push({ 
-                    id: categoryId, 
-                    name: categoryName,
-                    thumbnailUrl: thumbnailUrl
-                });
-                
-                elements.newCategoryInput.value = '';
-                elements.newCategoryThumbnail.value = '';
-                loadAdminCategories();
-                updateCategorySelect();
-            }
-        });
-
-        elements.uploadVideoBtn.addEventListener('click', () => {
-            const title = elements.videoTitleInput.value.trim();
-            const description = elements.videoDescriptionInput.value.trim();
-            const category = elements.videoCategorySelect.value;
-            const videoFile = elements.videoFileInput.files[0];
-            const thumbnailFile = elements.thumbnailFileInput.files[0];
-
-            if (!title || !category || !videoFile) {
-                alert('Please fill in all required fields');
-                return;
-            }
-
-            // Show upload progress
-            elements.uploadProgress.classList.remove('hidden');
-            elements.uploadStatus.textContent = 'Preparing upload...';
-
-            // Simulate upload progress
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 5;
-                elements.uploadProgressBar.style.width = `${progress}%`;
-                elements.uploadStatus.textContent = `Uploading... ${progress}%`;
-
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    elements.uploadStatus.textContent = 'Upload complete!';
-                    
-                    // Add the new video to our mock database
-                    const newVideo = {
-                        id: 'v' + (DB.videos.length + 1),
-                        title: title,
-                        description: description,
-                        category: category,
-                        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', // Placeholder
-                        thumbnailUrl: '/api/placeholder/320/180' // Placeholder
-                    };
-                    
-                    DB.videos.push(newVideo);
-                    
-                    // Reset form
-                    elements.videoTitleInput.value = '';
-                    elements.videoDescriptionInput.value = '';
-                    elements.videoFileInput.value = '';
-                    elements.thumbnailFileInput.value = '';
-                    
-                    setTimeout(() => {
-                        elements.uploadProgress.classList.add('hidden');
-                        elements.uploadProgressBar.style.width = '0%';
-                        alert('Video uploaded successfully!');
-                    }, 1000);
-                }
-            }, 200);
-        });
-
-        elements.homeLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            elements.videosContainer.classList.add('hidden');
-            elements.videoPlayerContainer.classList.add('hidden');
-            loadCategories();
-        });
-
-        elements.categoryEditCancelBtn.addEventListener('click', () => {
-            elements.categoryEditModal.classList.add('hidden');
-            currentEditingCategory = null;
-        });
-
-        elements.categoryEditSaveBtn.addEventListener('click', () => {
-            if (!currentEditingCategory) return;
-            
-            const newName = elements.editCategoryName.value.trim();
-            if (!newName) {
-                alert('Category name cannot be empty');
-                return;
-            }
-            
-            // Find the category
-            const category = DB.categories.find(cat => cat.id === currentEditingCategory);
-            if (category) {
-                category.name = newName;
-                
-                // Handle thumbnail update
-                const thumbnailFile = elements.editCategoryThumbnail.files[0];
-                if (thumbnailFile) {
-                    // In a real app, upload the file to Google Drive and update the URL
-                    // For this demo, we just simulate it
-                    console.log('Category thumbnail would be updated in Google Drive');
-                    // We keep the same placeholder URL
-                }
-                
-                loadAdminCategories();
-                updateCategorySelect();
-                elements.categoryEditModal.classList.add('hidden');
-                currentEditingCategory = null;
-            }
-        });
-
-        // Functions
-        function loadCategories() {
-            elements.categoriesContainer.innerHTML = '';
-            elements.categoriesContainer.classList.remove('hidden');
-            
-            DB.categories.forEach(category => {
-                const categoryCard = document.createElement('div');
-                categoryCard.className = 'bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow';
-                categoryCard.innerHTML = `
-                    <div class="h-40 bg-blue-100 flex items-center justify-center overflow-hidden">
-                        <img src="${category.thumbnailUrl}" alt="${category.name}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="p-4">
-                        <h3 class="text-xl font-bold">${category.name}</h3>
-                        <p class="text-gray-600">${getVideoCountByCategory(category.id)} videos</p>
-                    </div>
-                `;
-                
-                categoryCard.addEventListener('click', () => {
-                    loadVideosByCategory(category.id, category.name);
-                });
-                
-                elements.categoriesContainer.appendChild(categoryCard);
+                const size = isSelected ? 30 : 24;
+                const border = isSelected ? '4px solid white' : '3px solid white';
+                const zIndex = isSelected ? 1000 : 1;
+                const icon = L.divIcon({ className: '', html: `<div style="background:${color}; width:${size}px; height:${size}px; border-radius:50%; border:${border}; box-shadow:0 4px 10px rgba(0,0,0,0.3); transition: all 0.3s ease;"></div>`, iconSize: [size, size], iconAnchor: [size/2, size/2] });
+                const marker = L.marker([data.lat, data.lng], {icon: icon, zIndexOffset: zIndex});
+                marker.on('click', () => { selectedLandId = data.id; updateMapMarkers(displayedData); showFloatingCard(data); map.flyTo([data.lat, data.lng], 16); });
+                marker.addTo(landLayer);
             });
         }
 
-        function getVideoCountByCategory(categoryId) {
-            return DB.videos.filter(video => video.category === categoryId).length;
+        function resetRender() { renderCount = 0; document.getElementById('landList').innerHTML = ''; renderNextBatch(); }
+        function renderNextBatch() {
+            const listDiv = document.getElementById('landList'); const spinner = document.getElementById('loadMoreSpinner');
+            if(renderCount >= displayedData.length) { spinner.style.display = 'none'; if(displayedData.length === 0) listDiv.innerHTML = '<p class="text-center text-slate-400 py-10">No properties found.</p>'; return; }
+            const nextBatch = displayedData.slice(renderCount, renderCount + BATCH_SIZE);
+            nextBatch.forEach((data, index) => renderCard(data, listDiv, index));
+            renderCount += BATCH_SIZE;
+            spinner.style.display = renderCount < displayedData.length ? 'flex' : 'none';
+        }
+        document.getElementById('view-list').addEventListener('scroll', function() { if(this.scrollTop + this.clientHeight >= this.scrollHeight - 100 && document.getElementById('loadMoreSpinner').style.display === 'flex') renderNextBatch(); });
+
+        function formatSize(d) { return `${d.size || d.perches} ${d.sizeUnit === 'acre' ? 'Acres' : 'P'}`; }
+        function formatPrice(d) { return `Rs. ${d.price || d.pricePerPerch} <span class="text-slate-400 text-xs font-normal">${d.priceType === 'total' ? 'Total' : (d.sizeUnit === 'acre' ? '/ Acre' : '/ P')}</span>`; }
+
+        function renderCard(data, container, index = 0) {
+            const isSold = data.status === 'sold'; const isFav = favorites.includes(data.id);
+            const div = document.createElement('div');
+            div.className = "land-card bg-white p-3 rounded-2xl shadow-sm border border-slate-100 active:scale-[0.98] transition cursor-pointer flex gap-4 group relative";
+            div.style.animationDelay = `${index * 0.1}s`;
+            div.innerHTML = `<div class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 relative bg-slate-100"><img src="${data.imageUrls?.[0] || ''}" class="w-full h-full object-cover">${isSold ? '<div class="absolute inset-0 bg-red-500/50 flex items-center justify-center"><span class="bg-red-600 border border-white text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">SOLD</span></div>' : ''}${!isSold && data.isNew ? '<div class="absolute top-0 left-0 bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-br-lg shadow">NEW</div>' : ''}</div><div class="flex-1 flex flex-col justify-center min-w-0" onclick="openDetail(this.parentElement.data)"><h3 class="font-bold text-slate-800 text-lg leading-tight mb-1 truncate">${data.title}</h3><p class="text-xs text-slate-500 mb-1 truncate">📍 ${data.location}</p><p class="text-green-600 font-bold text-base">${formatPrice(data)}</p></div><button onclick="toggleFav('${data.id}', this)" class="absolute top-2 right-2 p-2 rounded-full ${isFav ? 'text-red-500' : 'text-gray-300 hover:text-red-400'}"><i class="fas fa-heart"></i></button>`;
+            div.data = data; container.appendChild(div);
         }
 
-        function loadVideosByCategory(categoryId, categoryName) {
-            elements.categoriesContainer.classList.add('hidden');
-            elements.videosContainer.classList.remove('hidden');
-            elements.categoryTitle.textContent = categoryName;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase().trim();
+            if(term === 'the kina' || term === 'thekina') { document.getElementById('secret-screen').classList.remove('hidden'); setTimeout(() => document.getElementById('secret-screen').classList.remove('opacity-0'), 50); return; }
+            if(term === "") { displayedData = [...landsData]; } 
+            else { 
+                const mappedTerm = cityMapping[term] || term;
+                displayedData = landsData.filter(l => l.location.toLowerCase().includes(term) || l.location.toLowerCase().includes(mappedTerm) || l.title.toLowerCase().includes(term));
+            }
+            resetRender();
+            updateMapMarkers(displayedData);
+        });
+
+        window.closeSecret = () => { const secret = document.getElementById('secret-screen'); secret.classList.add('opacity-0'); setTimeout(() => { secret.classList.add('hidden'); document.getElementById('searchInput').value = ""; displayedData = [...landsData]; resetRender(); updateMapMarkers(landsData); }, 500); };
+        window.sortLands = () => { const opt = document.getElementById('sortOption').value; let sorted = [...landsData]; if(opt === 'price_asc') sorted.sort((a, b) => (a.sortPrice || 0) - (b.sortPrice || 0)); else if(opt === 'price_desc') sorted.sort((a, b) => (b.sortPrice || 0) - (a.sortPrice || 0)); else sorted.sort((a,b) => b.sortDate - a.sortDate); landsData = sorted; displayedData = [...sorted]; resetRender(); };
+        window.openGoogleMaps = () => { if(!currentLand) return; window.open(`http://maps.google.com/maps?q=${currentLand.lat},${currentLand.lng}`, '_blank'); };
+        window.openStreetView = () => { if(!currentLand) return; window.open(`https://www.google.com/maps?q=&layer=c&cbll=${currentLand.lat},${currentLand.lng}`, '_blank'); };
+        
+        window.sendOffer = () => {
+            const amount = document.getElementById('offerInput').value;
+            if(!amount) return alert("Please enter an amount!");
+            const shareUrl = `${window.location.origin}${window.location.pathname}?id=${currentLand.id}`;
+            const msg = `Hi, I am interested in ${currentLand.title} (${shareUrl}). My offer is Rs. ${amount}. Can we discuss?`;
+            window.open(`https://wa.me/94726284277?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
+        window.toggleFav = (id, btn) => { if(favorites.includes(id)) { favorites = favorites.filter(x => x !== id); btn.classList.remove('text-red-500'); btn.classList.add('text-gray-300'); } else { favorites.push(id); btn.classList.add('text-red-500'); btn.classList.remove('text-gray-300'); } localStorage.setItem('cnv_favs', JSON.stringify(favorites)); if(document.getElementById('view-fav').classList.contains('active')) renderFavorites(); };
+        function renderFavorites() { const container = document.getElementById('favList'); container.innerHTML = ""; if(favorites.length === 0) { container.innerHTML = '<p class="text-slate-400 text-center mt-10">No saved items.</p>'; return; } favorites.forEach(id => { const l = landsData.find(x=>x.id===id); if(l) renderCard(l, container); }); }
+        
+        window.openFilter = () => document.getElementById('filterModal').classList.add('open');
+        window.closeFilter = () => document.getElementById('filterModal').classList.remove('open');
+        document.getElementById('priceRange').addEventListener('input', function() { document.getElementById('priceVal').innerText = this.value == 0 ? "Any" : "Max: Rs. " + Number(this.value).toLocaleString(); });
+        window.applyFilter = () => {
+            const maxPrice = document.getElementById('priceRange').value;
+            const minPerch = document.getElementById('perchMin').value;
+            displayedData = landsData.filter(l => {
+                let valid = true;
+                const size = l.size || l.perches || 0;
+                const totalPerches = (l.sizeUnit === 'acre') ? size * 160 : size;
+                if(maxPrice > 0 && (l.sortPrice || 0) > maxPrice) valid = false;
+                if(minPerch && totalPerches < minPerch) valid = false;
+                return valid;
+            });
+            resetRender(); updateMapMarkers(displayedData); closeFilter();
+        };
+
+        let selectedLandFromMap = null; 
+        function showFloatingCard(data) { 
+            selectedLandFromMap = data; 
+            document.getElementById('mapFloatCard').classList.remove('hidden'); 
+            document.getElementById('mapCardImg').src = data.imageUrls?.[0]; 
+            document.getElementById('mapCardTitle').innerText = data.title; 
+            document.getElementById('mapCardLocation').innerText = data.location; 
+            document.getElementById('mapCardPrice').innerHTML = formatPrice(data); 
+        } 
+        window.openDetailFromMap = () => { if(selectedLandFromMap) openDetail(selectedLandFromMap); };
+        
+        let currentImgs = []; let idx = 0; let currentLand = null; 
+        
+        window.openDetail = (data) => { 
+            currentLand = data; currentImgs = data.imageUrls; idx = 0; 
+            selectedLandId = data.id; 
             
-            elements.videosGrid.innerHTML = '';
+            // --- UPDATE AI CONTEXT ---
+            currentAiContext.title = data.title;
+            currentAiContext.price = formatPrice(data);
+            currentAiContext.location = data.location;
+            currentAiContext.description = data.description;
             
-            const videos = DB.videos.filter(video => video.category === categoryId);
+            updateMapMarkers(displayedData); 
+
+            document.getElementById('mapFloatCard').classList.add('hidden'); 
+            document.getElementById('detailImg').src = currentImgs[0]; 
+            document.getElementById('detailTitle').innerText = data.title; 
+            document.getElementById('detailLocation').innerText = data.location; 
+            document.getElementById('detailPerches').innerText = formatSize(data); 
+            document.getElementById('detailPrice').innerHTML = formatPrice(data); 
+            document.getElementById('detailDesc').innerText = data.description; 
             
-            videos.forEach(video => {
-                const videoCard = document.createElement('div');
-                videoCard.className = 'bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow';
-                videoCard.innerHTML = `
-                    <div class="relative">
-                        <img src="${video.thumbnailUrl}" alt="${video.title}" class="w-full h-48 object-cover">
-                        <div class="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="text-lg font-bold">${video.title}</h3>
-                    </div>
-                `;
+            const isSold = data.status === 'sold'; 
+            const badge = document.getElementById('detailBadge'); 
+            badge.innerText = isSold ? 'SOLD OUT' : 'AVAILABLE'; 
+            badge.className = `inline-block px-3 py-1 rounded-lg text-[10px] font-bold uppercase text-white shadow-lg mb-2 ${isSold ? 'bg-red-600' : 'bg-green-600'}`; 
+            if(data.isNew && !isSold) document.getElementById('detailNewBadge').classList.remove('hidden'); else document.getElementById('detailNewBadge').classList.add('hidden'); 
+            
+            renderSimilar(data);
+            calcDistanceOnMap(data.lat, data.lng);
+
+            analyzeRoadAccess(data.lat, data.lng);
+            analyzeTransport(data.lat, data.lng);
+            analyzeCrops(data.location);
+
+            const shareUrl = `${window.location.origin}${window.location.pathname}?id=${data.id}`; 
+            window.history.pushState({id: data.id}, '', shareUrl); 
+            document.getElementById('waBtn').href = `https://wa.me/94726284277?text=Hi, I'm interested in: ${shareUrl}`; 
+            document.getElementById('detail-view').classList.add('open'); 
+        };
+
+        window.generateFlyer = () => {
+            if(!currentLand) return;
+            const flyer = document.getElementById('flyer-template');
+            document.getElementById('flyerImg').src = currentLand.imageUrls[0];
+            document.getElementById('flyerTitle').innerText = currentLand.title;
+            document.getElementById('flyerLoc').innerText = currentLand.location;
+            document.getElementById('flyerPrice').innerText = "Rs. " + (currentLand.price || currentLand.pricePerPerch);
+            document.getElementById('flyerSize').innerText = formatSize(currentLand);
+            html2canvas(flyer, { useCORS: true, scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `CNV_${currentLand.title.replace(/\s/g, '_')}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                alert("Flyer Downloaded! 📸 You can now share it on WhatsApp.");
+            });
+        };
+
+        function analyzeCrops(location) {
+            const box = document.getElementById('cropBox');
+            const txt = document.getElementById('cropText');
+            const locLower = location.toLowerCase();
+            let found = [];
+            for(const [crop, areas] of Object.entries(cropZones)) { if(areas.some(area => locLower.includes(area))) { found.push(crop.charAt(0).toUpperCase() + crop.slice(1)); } }
+            
+            currentAiContext.crops = found.length > 0 ? found.join(", ") : "General residential/mixed"; // AI Update
+            
+            if(found.length > 0) { box.classList.remove('hidden'); txt.innerText = "Highly suitable for: " + found.join(", ") + "."; } 
+            else { box.classList.add('hidden'); }
+        }
+
+        async function analyzeTransport(lat, lng) {
+            const container = document.getElementById('transportContent');
+            container.innerHTML = `<div class="flex items-center gap-3 text-slate-500 py-2"><i class="fas fa-bus fa-bounce"></i> <span class="text-xs font-bold">Locating bus stops...</span></div>`;
+            const query = `[out:json][timeout:10];node["highway"="bus_stop"](around:1000,${lat},${lng});out tags;`;
+            try {
+                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if (!data.elements || data.elements.length === 0) { 
+                    currentAiContext.transport = "No immediate bus stops found within 1km."; // AI Update
+                    container.innerHTML = `<div class="bg-blue-50 p-3 rounded-lg border border-blue-100"><p class="text-xs text-blue-800 font-bold">No bus stops found within 1km.</p></div>`; return; 
+                }
+                const stops = data.elements.map(el => { return { ...el, dist: map.distance([lat, lng], [el.lat, el.lon]) }; }).sort((a, b) => a.dist - b.dist);
+                const nearest = stops[0];
+                const routeInfo = nearest.tags.route_ref || nearest.tags.routes || "Routes not mapped";
+                const stopName = nearest.tags.name || nearest.tags['name:en'] || "Bus Stop";
                 
-                videoCard.addEventListener('click', () => {
-                    playVideo(video);
-                });
+                currentAiContext.transport = `${stopName} is ${Math.round(nearest.dist)}m away. Routes: ${routeInfo}`; // AI Update
+
+                container.innerHTML = `<div class="flex justify-between items-center bg-white p-3 rounded-lg border border-blue-100 shadow-sm"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i class="fas fa-bus"></i></div><div><p class="text-[10px] uppercase text-slate-400 font-bold">Nearest Stop</p><p class="text-xs font-bold text-slate-800">${stopName}</p></div></div><span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded font-bold">${Math.round(nearest.dist)}m Away</span></div>${routeInfo !== "Routes not mapped" ? `<div class="mt-2 text-[10px] font-bold text-slate-500 flex items-center gap-2"><i class="fas fa-route"></i> Possible Routes: <span class="text-slate-800">${routeInfo}</span></div>` : ''}`;
+            } catch(e) { container.innerHTML = "<p class='text-xs text-red-400'>Transport data unavailable.</p>"; }
+        }
+
+        async function analyzeRoadAccess(lat, lng) {
+            const container = document.getElementById('roadAnalysisContent');
+            container.innerHTML = `<div class="flex items-center gap-3 text-slate-500 py-2"><i class="fas fa-satellite fa-spin"></i> <span class="text-xs font-bold">Scanning road network...</span></div>`;
+            const query = `[out:json][timeout:10];way(around:30,${lat},${lng})["highway"];out tags;`;
+            try {
+                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if (!data.elements || data.elements.length === 0) { 
+                    currentAiContext.roadWidth = "Unknown (Unmapped)"; 
+                    currentAiContext.roadVehicle = "Unknown";
+                    container.innerHTML = `<div class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"><i class="fas fa-road"></i></div><div><p class="text-[10px] uppercase text-slate-400 font-bold">Road Type</p><p class="text-xs font-bold text-slate-700">Unmapped / Private</p></div></div></div>`; return; 
+                }
+                const roadPriority = { 'trunk': 10, 'primary': 9, 'secondary': 8, 'tertiary': 7, 'residential': 6, 'unclassified': 5, 'service': 4, 'track': 3, 'path': 1 };
+                const bestRoad = data.elements.sort((a, b) => (roadPriority[a.tags.highway] || 0) - (roadPriority[b.tags.highway] || 0)).reverse()[0];
+                const type = bestRoad.tags.highway;
+                let widthEst = "10 - 12 Feet"; let vehicleEst = "Car / Small Lorry"; let icon = "fa-car"; let color = "text-yellow-600"; let bg = "bg-yellow-50";
+
+                if(['trunk', 'primary', 'secondary'].includes(type)) { widthEst = "25+ Feet (Main Rd)"; vehicleEst = "Container / Trailer"; icon = "fa-truck-moving"; color = "text-blue-600"; bg = "bg-blue-50"; } 
+                else if(['tertiary', 'residential', 'unclassified'].includes(type)) { widthEst = "15 - 20 Feet"; vehicleEst = "Lorry / Truck"; icon = "fa-truck"; color = "text-green-600"; bg = "bg-green-50"; } 
+                else if(['service', 'track'].includes(type)) { widthEst = "8 - 12 Feet"; vehicleEst = "Car / SUV / Tuk"; icon = "fa-car-side"; color = "text-orange-600"; bg = "bg-orange-50"; } 
+                else if(['path', 'footway'].includes(type)) { widthEst = "Less than 6 Feet"; vehicleEst = "Motorbike / Foot"; icon = "fa-motorcycle"; color = "text-red-600"; bg = "bg-red-50"; }
                 
-                elements.videosGrid.appendChild(videoCard);
+                // AI Context Update
+                currentAiContext.roadWidth = widthEst;
+                currentAiContext.roadVehicle = vehicleEst;
+
+                container.innerHTML = `<div class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${bg} flex items-center justify-center ${color}"><i class="fas ${icon}"></i></div><div><p class="text-[10px] uppercase text-slate-400 font-bold">Max Vehicle</p><p class="text-xs font-bold text-slate-800">${vehicleEst}</p></div></div></div><div class="grid grid-cols-2 gap-2"><div class="bg-white p-2 rounded-lg border border-slate-100"><p class="text-[9px] uppercase text-slate-400 font-bold">Est. Width</p><p class="text-xs font-bold text-slate-700">${widthEst}</p></div><div class="bg-white p-2 rounded-lg border border-slate-100"><p class="text-[9px] uppercase text-slate-400 font-bold">Road Type</p><p class="text-xs font-bold text-slate-700 capitalize">${type}</p></div></div>`;
+            } catch(e) { container.innerHTML = "<p class='text-xs text-red-400'>Could not analyze road data.</p>"; }
+        }
+
+        function renderSimilar(current) {
+            const list = document.getElementById('similarList');
+            list.innerHTML = "";
+            const similar = landsData.filter(l => l.id !== current.id && l.status !== 'sold' && (l.location === current.location || Math.abs((l.sortPrice||0) - (current.sortPrice||0)) < 500000)).slice(0, 3);
+            if(similar.length === 0) { list.innerHTML = "<p class='text-xs text-slate-400 italic'>No similar properties found.</p>"; return; }
+            similar.forEach(d => {
+                const div = document.createElement('div');
+                div.className = "flex gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100 cursor-pointer active:scale-95 transition";
+                div.onclick = () => openDetail(d);
+                div.innerHTML = `<img src="${d.imageUrls[0]}" class="w-16 h-16 rounded-lg object-cover"><div class="flex-1 min-w-0 flex flex-col justify-center"><h4 class="font-bold text-slate-800 text-xs truncate">${d.title}</h4><p class="text-[10px] text-slate-500 truncate">${d.location}</p><p class="text-green-600 font-bold text-xs">${formatPrice(d)}</p></div>`;
+                list.appendChild(div);
             });
         }
 
-        function playVideo(video) {
-            elements.videosContainer.classList.add('hidden');
-            elements.videoPlayerContainer.classList.remove('hidden');
-            
-            elements.videoTitle.textContent = video.title;
-            elements.videoDescription.textContent = video.description;
-            
-            // Create video element
-            elements.videoPlayer.innerHTML = `
-                <video controls class="w-full h-full">
-                    <source src="${video.videoUrl}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+        async function calcDistanceOnMap(lat, lng) { 
+            nearbyLayer.clearLayers(); 
+            const list = document.getElementById('nearbyList'); 
+            list.innerHTML = `<div class="flex items-center gap-3 text-slate-500"><div class="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div><span class="text-xs font-bold animate-pulse">Scanning nearby...</span></div>`; 
+            const query = `[out:json][timeout:25];(nwr["amenity"~"school|hospital|bank|pharmacy|fuel"](around:2000,${lat},${lng});nwr["shop"~"supermarket|convenience"](around:2000,${lat},${lng}););out center;`; 
+            try { 
+                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`); 
+                const data = await res.json(); 
+                list.innerHTML = ""; 
+                if(data.elements.length === 0) { list.innerHTML = "<p class='text-xs text-slate-400 italic'>No major landmarks within 2km.</p>"; return; }
+                const places = data.elements.map(el => { 
+                    const pLat = el.lat || (el.center && el.center.lat); 
+                    const pLon = el.lon || (el.center && el.center.lon); 
+                    if(!pLat || !pLon) return null; 
+                    const d = map.distance([lat, lng], [pLat, pLon]); 
+                    return { ...el, dist: d, lat: pLat, lon: pLon }; 
+                }).filter(el => el !== null).sort((a,b) => a.dist - b.dist).slice(0, 6); 
+                places.forEach(el => { 
+                    const distTxt = el.dist > 1000 ? (el.dist/1000).toFixed(1)+"km" : Math.round(el.dist)+"m"; 
+                    let icon='📍', color='#64748b', typeName='Place';
+                    const t = el.tags;
+                    if(t.amenity === 'school') { icon='🎓'; color='#2563eb'; typeName='School'; } 
+                    else if(t.amenity === 'hospital') { icon='🏥'; color='#ef4444'; typeName='Hospital'; } 
+                    else if(t.shop === 'supermarket' || t.shop === 'convenience') { icon='🛒'; color='#f97316'; typeName='Supermarket'; } 
+                    else if(t.amenity === 'bank') { icon='🏦'; color='#8b5cf6'; typeName='Bank'; }
+                    else if(t.amenity === 'fuel') { icon='⛽'; color='#eab308'; typeName='Fuel Station'; }
+                    else if(t.highway === 'bus_stop') { icon='🚌'; color='#06b6d4'; typeName='Bus Stop'; }
+                    else if(t.amenity === 'pharmacy') { icon='💊'; color='#ec4899'; typeName='Pharmacy'; }
+                    const name = t.name || t['name:si'] || t['name:en'] || typeName; 
+                    list.innerHTML += `<div class="flex justify-between py-2.5 border-b border-slate-100 last:border-0 items-center group cursor-pointer hover:bg-slate-50 px-2 rounded-lg transition" onclick="map.flyTo([${el.lat}, ${el.lon}], 16)"><div class="flex items-center gap-3"><span class="text-lg bg-slate-100 w-8 h-8 flex items-center justify-center rounded-full shadow-sm">${icon}</span><div class="flex flex-col"><span class="text-xs font-bold text-slate-700 truncate max-w-[150px]">${name}</span><span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">${typeName}</span></div></div><span class="font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded text-[10px] whitespace-nowrap">${distTxt}</span></div>`; 
+                    const html = `<div class="dist-marker" style="border-left-color:${color}"><div class="dist-name">${name}</div><div class="dist-val"><span>${icon}</span> ${distTxt}</div></div>`; 
+                    L.marker([el.lat, el.lon], {icon: L.divIcon({className:'', html:html, iconSize:[120,40], iconAnchor:[60,45]})}).addTo(nearbyLayer); 
+                }); 
+            } catch(e) { console.log(e); list.innerHTML = "<p class='text-xs text-red-400'>Check internet.</p>"; } 
+        }
+
+        window.shareLink = () => navigator.clipboard.writeText(window.location.href).then(() => alert("Link Copied! 🔗"));
+        window.slide = (n) => { idx += n; if(idx >= currentImgs.length) idx = 0; if(idx < 0) idx = currentImgs.length - 1; document.getElementById('detailImg').src = currentImgs[idx]; };
+        window.closeDetail = () => { document.getElementById('detail-view').classList.remove('open'); window.history.pushState({}, '', window.location.pathname); document.getElementById('mapFloatCard').classList.add('hidden'); };
+        window.viewOnMap = () => { if(!currentLand) return; document.getElementById('detail-view').classList.remove('open'); switchTab('map'); map.flyTo([currentLand.lat, currentLand.lng], 16); calcDistanceOnMap(currentLand.lat, currentLand.lng); };
+        
+        // --- AI CHAT LOGIC ---
+        window.openChat = () => document.getElementById('ai-chat-window').classList.add('open');
+        window.closeChat = () => document.getElementById('ai-chat-window').classList.remove('open');
+
+        window.sendMessage = async () => {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if(!msg) return;
+
+            // 1. Show User Message
+            const chatBox = document.getElementById('chat-messages');
+            chatBox.innerHTML += `<div class="chat-msg user-msg">${msg}</div>`;
+            input.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 2. Show Typing Indicator
+            const loadingId = "loading-" + Date.now();
+            chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg ai-msg typing-indicator"><span></span><span></span><span></span></div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 3. Build AI Prompt with Land Context
+            const landContext = currentLand ? `
+                SELECTED LAND DETAILS:
+                - Title: ${currentAiContext.title}
+                - Price: ${currentAiContext.price}
+                - Location: ${currentAiContext.location}
+                - Description: ${currentAiContext.description}
+                - Access Road Width: ${currentAiContext.roadWidth}
+                - Max Vehicle: ${currentAiContext.roadVehicle}
+                - Public Transport: ${currentAiContext.transport}
+                - Suitable Crops: ${currentAiContext.crops}
+            ` : "USER HAS NOT SELECTED A LAND YET.";
+
+            const prompt = `
+                You are a professional real estate AI assistant for 'CNV Holdings'. 
+                Reply in SINHALA language. Be friendly and professional.
+                
+                ${landContext}
+                
+                USER QUESTION: "${msg}"
+                
+                INSTRUCTIONS:
+                - If the user asks about the selected land, use the details above.
+                - If they ask about loans, give a general estimation based on the price.
+                - If road width is narrow, advise about vehicle accessibility carefully.
+                - Keep answers concise (under 3 sentences if possible).
             `;
-            
-            // Auto play the video
-            const videoElement = elements.videoPlayer.querySelector('video');
-            videoElement.play();
-        }
 
-        function loadAdminInterface() {
-            loadAdminCategories();
-            updateCategorySelect();
-        }
-
-        function loadAdminCategories() {
-            elements.adminCategoriesList.innerHTML = '';
-            
-            DB.categories.forEach(category => {
-                const categoryChip = document.createElement('div');
-                categoryChip.className = 'bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center';
-                categoryChip.innerHTML = `
-                    <span>${category.name}</span>
-                    <div class="ml-2 flex">
-                        <button class="text-blue-500 hover:text-blue-700 mr-1 edit-btn" data-category-id="${category.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                        </button>
-                        <button class="text-red-500 hover:text-red-700 delete-btn" data-category-id="${category.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                `;
-                
-                const deleteBtn = categoryChip.querySelector('.delete-btn');
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const categoryId = deleteBtn.getAttribute('data-category-id');
-                    deleteCategory(categoryId);
+            try {
+                // 4. Call Google Gemini API
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
-                
-                const editBtn = categoryChip.querySelector('.edit-btn');
-                editBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const categoryId = editBtn.getAttribute('data-category-id');
-                    openCategoryEditModal(categoryId);
-                });
-                
-                elements.adminCategoriesList.appendChild(categoryChip);
-            });
-        }
 
-        function openCategoryEditModal(categoryId) {
-            const category = DB.categories.find(cat => cat.id === categoryId);
-            if (!category) return;
-            
-            currentEditingCategory = categoryId;
-            elements.editCategoryName.value = category.name;
-            
-            // Update thumbnail preview
-            const previewImg = elements.currentThumbnailPreview.querySelector('img');
-            const previewText = elements.currentThumbnailPreview.querySelector('span');
-            
-            if (category.thumbnailUrl) {
-                previewImg.src = category.thumbnailUrl;
-                previewImg.classList.remove('hidden');
-                previewText.textContent = 'Current thumbnail';
-            } else {
-                previewImg.classList.add('hidden');
-                previewText.textContent = 'No thumbnail set';
+                const data = await response.json();
+                const aiReply = data.candidates[0].content.parts[0].text;
+
+                // 5. Remove Loading & Show Reply
+                document.getElementById(loadingId).remove();
+                // Parse Markdown (Bold, Lists) using 'marked' library
+                chatBox.innerHTML += `<div class="chat-msg ai-msg">${marked.parse(aiReply)}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `<div class="chat-msg ai-msg text-red-500">සමාවන්න, මට දැන් පිළිතුරු දිය නොහැක. කරුණාකර නැවත උත්සාහ කරන්න.</div>`;
             }
-            
-            elements.categoryEditModal.classList.remove('hidden');
-        }
+        };
 
-        function deleteCategory(categoryId) {
-            // Remove category
-            DB.categories = DB.categories.filter(cat => cat.id !== categoryId);
-            
-            // Update videos (in a real app, you might reassign or delete the videos)
-            DB.videos = DB.videos.filter(video => video.category !== categoryId);
-            
-            // Refresh UI
-            loadAdminCategories();
-            updateCategorySelect();
-        }
-
-        function updateCategorySelect() {
-            elements.videoCategorySelect.innerHTML = '';
-            
-            DB.categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.textContent = category.name;
-                elements.videoCategorySelect.appendChild(option);
-            });
-        }
-
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', () => {
-            initGoogleDriveAPI();
-            loadCategories();
-        });
+        loadLands();
     </script>
 </body>
 </html>
